@@ -24,7 +24,9 @@ Check aiomqtt for async MQTT client
 
 import logging
 import json
+import sys
 import time
+
 import paho.mqtt.client as mqtt
 
 logging.basicConfig(
@@ -33,14 +35,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
-
-dose_interval = 60.0
-
-current_ec = 0.0
-target_ec = 2.0
-last_dose_time = time.time()
-
-ec_pump = Pump(1)
+SEPARATOR = "/"
+CALIBRATE = "calibrate"
+CONTROL = "control"
+PARAMETERS = "parameters"
+TOPIC_PREFIX = "hydro"
+TOPICS = {
+    CONTROL: SEPARATOR.join([TOPIC_PREFIX, CONTROL]),
+    CALIBRATE: SEPARATOR.join([TOPIC_PREFIX, CALIBRATE]),
+    PARAMETERS: SEPARATOR.join([TOPIC_PREFIX, PARAMETERS]),
+}
 
 
 # def read_ec():
@@ -65,13 +69,16 @@ def should_run_clibration():
     return
 
 
-def on_message(client, userdata, message):
+def on_message(_client, _userdata, message):
     topic = message.topic
     payload = message.payload.decode("utf-8")
-    if topic == "farm/calibrate":
+    if topic == TOPICS[CALIBRATE]:
         if payload == "ec":
             ec_sensor.calibrate()
-    elif topic == "farm/parameters":
+    elif topic == TOPICS[CONTROL]:
+        if payload == 0:
+            ec_pump.stop()
+    elif topic == PARAMETERS[CONTROL]:
         try:
             data = json.loads(payload)
         except json.decoder.JSONDecodeError as e:
@@ -80,40 +87,42 @@ def on_message(client, userdata, message):
             )
         dose_duration = data.get("dose_duration", 1)
         dose_interval = data.get("dose_interval", 60)
-    elif topic == "farm/control":
-        if payload == 0:
-            ec_pump.stop()
 
 
-def setup_mqtt():
+def setup_mqtt(client, on_message):
     client = mqtt.Client()
-    client.username_pw_set(CONFIG.MQTT.username, CONFIG.MQTT.password)
-    ret = client.connect(CONFIG.MQTT.host, port=CONFIG.MQTT.port)
+    host = "foo"
+    port = "bar"
+    username = "hamqtt"
+    password = "dsaddasfsadsa"
+    client.username_pw_set(username, password)
+    ret = client.connect(host, port=port)
     logger.debug(f"MQTT client connect return code: {ret}")
-
     # Add different plugs
-    for topic in ["farm/calibrate", "farm/parameters", "farm/control"]:
+    for topic in TOPICS.values():
         client.subscribe(topic)
     client.on_message = on_message
-
     return client
 
 
 client = setup_mqtt()
 client.loop_start()
-
 control = True
+should_calibrate = False
+dose_interval = 60.0
+current_ec = 0.0
+target_ec = 2.0
+last_dose_time = time.time()
+
+ec_pump = Pump(1)
 while True:
     # Below seems to raise an exception - not sure why
     if not client.is_connected():
         logger.error("mqtt_client not connected")
         client.reconnect()
 
-    if should_run_clibration():
+    if should_calibrate:
         ec_sensor.calibrate()
-
-    if toggle_control():
-        control = not control
 
     if control:
         last_dose_time = control_ec(last_dose_time)
