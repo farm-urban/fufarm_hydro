@@ -33,7 +33,7 @@ TOPIC_PREFIX = "hydro"
 TOPICS = {
     CONTROL: SEPARATOR.join([TOPIC_PREFIX, CONTROL]),
     CALIBRATE: SEPARATOR.join([TOPIC_PREFIX, CALIBRATE]),
-    EC: "sensors/sensor/ec1"
+    EC: "sensors/sensor/ec1",
     PARAMETERS: SEPARATOR.join([TOPIC_PREFIX, PARAMETERS]),
 }
 
@@ -89,7 +89,8 @@ class State:
 def setup_mqtt(on_message: Callable):
     """Setup the MQTT client and subscribe to topics."""
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    host = "homeassistant.local"
+    #host = "homeassistant.local"
+    host = "localhost"
     port = 1883
     username = "hamqtt"
     password = "UbT4Rn3oY7!S9L"

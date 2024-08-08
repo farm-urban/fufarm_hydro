@@ -3,7 +3,8 @@ import time
 import paho.mqtt.client as mqtt
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-host = "homeassistant.local"
+#host = "homeassistant.local"
+host = "localhost"
 port = 1883
 username = "hamqtt"
 password = "UbT4Rn3oY7!S9L"
@@ -37,6 +38,6 @@ params = {
     "target_ec": 2.2,
 }
 
-client.publish(TOPICS[PARAMETERS], json.dumps(params))
+#client.publish(TOPICS[PARAMETERS], json.dumps(params))
 client.publish(TOPICS[CONTROL], 1)
 # client.publish(TOPICS[EC], 1.2)
