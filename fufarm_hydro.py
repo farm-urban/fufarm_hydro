@@ -1,9 +1,10 @@
 """Farm Urban Hydroponic System
 
 app:
+  motor_pin: 0
   log_level: 'DEBUG'
   topic_prefix: 'hydro'
-  motor_pin: 0
+  ec_prefix: 'sensors/sensor/ec1'
 state:
   control: False
   should_calibrate: False
@@ -84,9 +85,10 @@ class State:
 class AppConfig:
     """Configures the Application."""
 
-    topic_prefix: str = "hydro"
-    log_level: str = "INFO"
     motor_pin: int = 0
+    log_level: str = "INFO"
+    topic_prefix: str = "hydro"
+    ec_prefix: str = "sensors/sensor/ec1"
 
     def __repr__(self):
         return "<\n%s\n>" % str(
@@ -221,7 +223,7 @@ PARAMETERS = "parameters"
 TOPICS = {
     CONTROL: SEPARATOR.join([app_config.topic_prefix, CONTROL]),
     CALIBRATE: SEPARATOR.join([app_config.topic_prefix, CALIBRATE]),
-    EC: "sensors/sensor/ec1",
+    EC: app_config.ec_prefix,
     PARAMETERS: SEPARATOR.join([app_config.topic_prefix, PARAMETERS]),
 }
 

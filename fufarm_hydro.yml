@@ -1,7 +1,8 @@
 app:
-  log_level: 'DEBUG'
-  topic_prefix: 'hydro'
   motor_pin: 3
+  log_level: "DEBUG"
+  topic_prefix: "hydro"
+  ec_prefix: "sensors/sensor/ec1"
 state:
   control: False
   should_calibrate: False
