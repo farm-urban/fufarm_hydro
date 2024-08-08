@@ -22,18 +22,22 @@ last_dose_time
 Check aiomqtt for async MQTT client
 """
 
+from dataclasses import dataclass
+
 import logging
 import json
 import sys
 import time
+from typing import Callable
 
 import paho.mqtt.client as mqtt
 
+
 logging.basicConfig(
-    level="INFO",
+    level="DEBUG",
     format=f"%(asctime)s rpi: %(message)s",
 )
-logger = logging.getLogger()
+_LOG = logging.getLogger()
 
 SEPARATOR = "/"
 CALIBRATE = "calibrate"
@@ -47,57 +51,95 @@ TOPICS = {
 }
 
 
-# def read_ec():
+class Pump:
+    """Mock class for running pump"""
+
+    def __init__(self, pin):
+        self.pin = pin
+
+    def run(self, dose_duration):
+        """Dose for a given duration"""
+        _LOG.info("Dosing for %d seconds", dose_duration)
+        return
 
 
-def control_ec():
-    current_ec = ec_sensor.read()
-    if current_ec < target_ec:
-        if time.time() - last_dose_time > dose_interval:
-            last_dose_time = time.time()
-            ec_pump.run(dose_interval)
-    return last_dose_time
+@dataclass
+class State:
+    """Tracks the current state of the app."""
+
+    control: bool = True
+    should_calibrate: bool = False
+    equilibration_time: int = 60
+    current_ec: float = 10.0
+    target_ec: float = 1.8
+    last_dose_time: float = time.time()
+    dose_duration: int = 5
+
+    def __repr__(self):
+        return "<\n%s\n>" % str(
+            "\n ".join("%s : %s" % (k, repr(v)) for (k, v) in self.__dict__.items())
+        )
 
 
-def toggle_control():
-    """Check for message to toggle control"""
+def control_ec(state: State, pump: Pump):
+    """Control the EC level"""
+    if state.current_ec < state.target_ec:
+        if time.time() - state.last_dose_time > state.equilibration_time:
+            # _LOG.info("Dosing for %d seconds", dose_duration)
+            pump.run(state.dose_duration)
+            state.last_dose_time = time.time()
     return
 
 
-def should_run_clibration():
-    """Check for message to calibrate"""
-    return
+def get_current_ec():
+    """Get the current EC level"""
+    return 0.0
 
 
-def on_message(_client, _userdata, message):
-    topic = message.topic
-    payload = message.payload.decode("utf-8")
-    if topic == TOPICS[CALIBRATE]:
-        if payload == "ec":
-            ec_sensor.calibrate()
-    elif topic == TOPICS[CONTROL]:
-        if payload == 0:
-            ec_pump.stop()
-    elif topic == PARAMETERS[CONTROL]:
-        try:
-            data = json.loads(payload)
-        except json.decoder.JSONDecodeError as e:
-            logger.warning(
-                "Error decoding MQTT data to JSON: %s\nMessage was: %s", e.msg, e.doc
-            )
-        dose_duration = data.get("dose_duration", 1)
-        dose_interval = data.get("dose_interval", 60)
+def create_on_message(state: State):
+    """Create a callback to handle incoming MQTT messages."""
+
+    def on_message(_client, _userdata, message):
+        topic = message.topic
+        payload = message.payload.decode("utf-8")
+        _LOG.debug("Received message: %s %s", topic, payload)
+        if topic == TOPICS[CALIBRATE]:
+            if payload == "ec":
+                state.should_calibrate = True
+        elif topic == TOPICS[CONTROL]:
+            if payload == 0:
+                state.control = False
+            elif payload == 1:
+                state.control = True
+            else:
+                _LOG.warning("Invalid payload for control topic: %s", payload)
+        elif topic == TOPICS[PARAMETERS]:
+            try:
+                data = json.loads(payload)
+            except json.decoder.JSONDecodeError as e:
+                _LOG.warning(
+                    "Error decoding PARAMETERS data to JSON: %s\nMessage was: %s",
+                    e.msg,
+                    e.doc,
+                )
+            if "equilibration_time" in data:
+                state.equilibration_time = data["equilibration_time"]
+            if "target_ec" in data:
+                state.target_ec = data["target_ec"]
+        return
+
+    return on_message
 
 
-def setup_mqtt(client, on_message):
-    client = mqtt.Client()
-    host = "foo"
-    port = "bar"
+def setup_mqtt(on_message: Callable):
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    host = "homeassistant.local"
+    port = 1883
     username = "hamqtt"
-    password = "dsaddasfsadsa"
+    password = "UbT4Rn3oY7!S9L"
     client.username_pw_set(username, password)
     ret = client.connect(host, port=port)
-    logger.debug(f"MQTT client connect return code: {ret}")
+    _LOG.debug("MQTT client connect return code: %d", ret)
     # Add different plugs
     for topic in TOPICS.values():
         client.subscribe(topic)
@@ -105,26 +147,28 @@ def setup_mqtt(client, on_message):
     return client
 
 
-client = setup_mqtt()
-client.loop_start()
-control = True
-should_calibrate = False
-dose_interval = 60.0
-current_ec = 0.0
-target_ec = 2.0
-last_dose_time = time.time()
-
+current_state = State()
+on_mqtt_message = create_on_message(current_state)
+mqtt_client = setup_mqtt(on_mqtt_message)
 ec_pump = Pump(1)
+
+mqtt_client.loop_start()
+last_dose_time = time.time()
 while True:
-    # Below seems to raise an exception - not sure why
-    if not client.is_connected():
-        logger.error("mqtt_client not connected")
-        client.reconnect()
+    while not mqtt_client.is_connected():
+        _LOG.warning("mqtt_client not connected")
+        ret = mqtt_client.reconnect()
+        _LOG.debug("MQTT client reconnect return code: %d", ret)
+        time.sleep(2)
+    _LOG.info("mqtt_client connected: %s", mqtt_client.is_connected())
+    _LOG.info("state connected: %s", current_state)
 
-    if should_calibrate:
-        ec_sensor.calibrate()
+    current_state.current_ec = get_current_ec()
+    if current_state.should_calibrate:
+        _LOG.info("Calibrating EC sensor")
 
-    if control:
-        last_dose_time = control_ec(last_dose_time)
+    if current_state.control:
+        _LOG.info("Calling control_ec")
+        control_ec(current_state, ec_pump)
 
-    time.sleep(1)
+    time.sleep(3)
