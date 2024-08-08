@@ -1,7 +1,7 @@
 app:
   log_level: 'DEBUG'
   topic_prefix: 'hydro'
-  motor_pin: 0
+  motor_pin: 3
 state:
   control: False
   should_calibrate: False

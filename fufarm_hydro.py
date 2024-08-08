@@ -25,7 +25,6 @@ from dataclasses import dataclass
 import logging
 import json
 import os
-import sys
 import time
 from typing import Callable
 
@@ -189,33 +188,29 @@ def calibrate_ec():
     return
 
 
-def process_config(file_path, app_config, current_state):
+def process_config(
+    file_path,
+):
     """Process the configuration file."""
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         yamls = yaml.safe_load(f)
 
-    print("GOT YAMLS", yamls)
+        if "app" in yamls:
+            _app_config = AppConfig(**yamls["app"])
+        if "state" in yamls:
+            _current_state = State(**yamls["state"])
 
-    # # Handle individual configuration variables
-    # if not hasattr(logging, config.APP.log_level):
-    #     raise AttributeError(f"Unknown log_level: {config.APP.log_level}")
+    if not hasattr(logging, app_config.log_level):
+        raise AttributeError(f"Unknown log_level: {app_config.APP.log_level}")
 
-    # config.APP.poll_interval = eval(config.APP.poll_interval)
-    # config.INFLUX.token = open("TOKEN").readline().strip()
-    # config.BLUELAB.tag_to_stationid = {
-    #     x[0]: x[1] for x in config.BLUELAB.tag_to_stationid
-    # }
-    return
+    return _app_config, _current_state
 
 
 CONFIG_FILE = "fufarm_hydro.yml"
 current_state = State()
 app_config = AppConfig()
 if os.path.isfile(CONFIG_FILE):
-    process_config(CONFIG_FILE, app_config, current_state)
-
-sys.exit()
-
+    app_config, current_state = process_config(CONFIG_FILE)
 
 LOOP_DELAY = 3
 SEPARATOR = "/"
@@ -224,15 +219,15 @@ CONTROL = "control"
 EC = "ec"
 PARAMETERS = "parameters"
 TOPICS = {
-    CONTROL: SEPARATOR.join([TOPIC_PREFIX, CONTROL]),
-    CALIBRATE: SEPARATOR.join([TOPIC_PREFIX, CALIBRATE]),
+    CONTROL: SEPARATOR.join([app_config.topic_prefix, CONTROL]),
+    CALIBRATE: SEPARATOR.join([app_config.topic_prefix, CALIBRATE]),
     EC: "sensors/sensor/ec1",
-    PARAMETERS: SEPARATOR.join([TOPIC_PREFIX, PARAMETERS]),
+    PARAMETERS: SEPARATOR.join([app_config.topic_prefix, PARAMETERS]),
 }
 
 
 logging.basicConfig(
-    level="DEBUG",
+    level=app_config.log_level,
     format="%(asctime)s rpi: %(message)s",
 )
 _LOG = logging.getLogger()
@@ -240,7 +235,7 @@ _LOG = logging.getLogger()
 
 on_mqtt_message = create_on_message(current_state)
 mqtt_client = setup_mqtt(on_mqtt_message)
-ec_pump = Pump(MOTOR_PIN)
+ec_pump = Pump(app_config.motor_pin)
 mqtt_client.loop_start()
 
 last_dose_time = time.time()
