@@ -1,5 +1,6 @@
 """Farm Urban Hydroponic System
 
+Example configuration fufarm_hydro.yml file:
 app:
   motor_pin: 0
   log_level: 'DEBUG'
@@ -21,12 +22,12 @@ https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuit
 Could look at aiomqtt for async MQTT client
 """
 
-from dataclasses import dataclass
-
 import logging
 import json
 import os
 import time
+
+from dataclasses import dataclass
 from typing import Callable
 
 import paho.mqtt.client as mqtt
@@ -44,9 +45,8 @@ class Pump:
 
         pid = f"D{pin:d}"
         if not hasattr(board, pid):
-            raise AttributeError("NO PIN")
-        dpin = getattr(board, pid)
-        pwm = pwmio.PWMOut(dpin, frequency=50)
+            raise AttributeError(f"Could not find pin {pin} on board")
+        pwm = pwmio.PWMOut(getattr(board, pid), frequency=50)
         self.my_servo = servo.ContinuousServo(pwm)
 
     def run(self, dose_duration):
@@ -94,6 +94,23 @@ class AppConfig:
         return "<\n%s\n>" % str(
             "\n ".join("%s : %s" % (k, repr(v)) for (k, v) in self.__dict__.items())
         )
+
+
+def process_config(
+    file_path,
+):
+    """Process the configuration file."""
+    with open(file_path, "r", encoding="utf-8") as f:
+        yamls = yaml.safe_load(f)
+        if "app" in yamls:
+            _app_config = AppConfig(**yamls["app"])
+        if "state" in yamls:
+            _current_state = State(**yamls["state"])
+
+    if not hasattr(logging, app_config.log_level):
+        raise AttributeError(f"Unknown log_level: {_app_config.APP.log_level}")
+
+    return _app_config, _current_state
 
 
 def setup_mqtt(on_message: Callable):
@@ -188,24 +205,6 @@ def calibrate_ec():
     """Calibrate the EC sensor"""
     _LOG.info("Calibrating EC sensor")
     return
-
-
-def process_config(
-    file_path,
-):
-    """Process the configuration file."""
-    with open(file_path, "r", encoding="utf-8") as f:
-        yamls = yaml.safe_load(f)
-
-        if "app" in yamls:
-            _app_config = AppConfig(**yamls["app"])
-        if "state" in yamls:
-            _current_state = State(**yamls["state"])
-
-    if not hasattr(logging, app_config.log_level):
-        raise AttributeError(f"Unknown log_level: {app_config.APP.log_level}")
-
-    return _app_config, _current_state
 
 
 CONFIG_FILE = "fufarm_hydro.yml"
