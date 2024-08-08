@@ -39,4 +39,4 @@ params = {
 
 client.publish(TOPICS[PARAMETERS], json.dumps(params))
 client.publish(TOPICS[CONTROL], 1)
-client.publish(TOPICS[EC], 1.2)
+# client.publish(TOPICS[EC], 1.2)
