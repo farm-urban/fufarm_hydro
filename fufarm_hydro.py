@@ -1,25 +1,9 @@
 """Farm Urban Hydroponic System
 
-Listen for messages to:
-* Calibrate sensors
-* Set dosing parameters
-* Switch between monitor/control
+Notes:
+https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi
 
-
-Subscribe to MQTT broker - topics:
-* farm/calibrate - which sensor to calibrate
-* farm/parameters - set dosing parameters
-* farm/control - switch between monitor/control
-
-Key variables:
-current_ec
-target_ec
-dose_duration
-dose_interval
-last_dose_time
-
-
-Check aiomqtt for async MQTT client
+Could look at aiomqtt for async MQTT client
 """
 
 from dataclasses import dataclass
@@ -31,12 +15,13 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-
 logging.basicConfig(
     level="DEBUG",
-    format=f"%(asctime)s rpi: %(message)s",
+    format="%(asctime)s rpi: %(message)s",
 )
 _LOG = logging.getLogger()
+
+MOTOR_PIN = 0
 
 LOOP_DELAY = 3
 SEPARATOR = "/"
@@ -57,12 +42,29 @@ class Pump:
     """Mock class for running pump"""
 
     def __init__(self, pin):
-        self.pin = pin
+        # pylint: disable=import-outside-toplevel,import-error
+        import board
+        import pwmio
+        from adafruit_motor import servo
+
+        pid = f"D{pin:d}"
+        if not hasattr(board, pid):
+            raise AttributeError("NO PIN")
+        dpin = getattr(board, pid)
+        pwm = pwmio.PWMOut(dpin, frequency=50)
+        self.my_servo = servo.ContinuousServo(pwm)
 
     def run(self, dose_duration):
-        """Dose for a given duration"""
+        """Dose for a given duration
+
+        1.0 is full speed forward
+        0.0 is stopped
+        -1.0 is full speed reverse
+        """
         _LOG.info("Dosing for %d seconds", dose_duration)
+        self.my_servo.throttle = 1.0
         time.sleep(dose_duration)
+        self.my_servo.throttle = 0.0
         return
 
 
@@ -180,7 +182,7 @@ def calibrate_ec():
 current_state = State()
 on_mqtt_message = create_on_message(current_state)
 mqtt_client = setup_mqtt(on_mqtt_message)
-ec_pump = Pump(1)
+ec_pump = Pump(MOTOR_PIN)
 mqtt_client.loop_start()
 
 last_dose_time = time.time()
