@@ -1,5 +1,19 @@
 """Farm Urban Hydroponic System
 
+app:
+  log_level: 'DEBUG'
+  topic_prefix: 'hydro'
+  motor_pin: 0
+state:
+  control: False
+  should_calibrate: False
+  equilibration_time: 3
+  current_ec: 10.0
+  target_ec: 1.8
+  last_dose_time: 0
+  dose_duration: 5
+~                   
+
 Notes:
 https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi
 
@@ -10,32 +24,13 @@ from dataclasses import dataclass
 
 import logging
 import json
+import os
+import sys
 import time
 from typing import Callable
 
 import paho.mqtt.client as mqtt
-
-logging.basicConfig(
-    level="DEBUG",
-    format="%(asctime)s rpi: %(message)s",
-)
-_LOG = logging.getLogger()
-
-MOTOR_PIN = 0
-
-LOOP_DELAY = 3
-SEPARATOR = "/"
-CALIBRATE = "calibrate"
-CONTROL = "control"
-EC = "ec"
-PARAMETERS = "parameters"
-TOPIC_PREFIX = "hydro"
-TOPICS = {
-    CONTROL: SEPARATOR.join([TOPIC_PREFIX, CONTROL]),
-    CALIBRATE: SEPARATOR.join([TOPIC_PREFIX, CALIBRATE]),
-    EC: "sensors/sensor/ec1",
-    PARAMETERS: SEPARATOR.join([TOPIC_PREFIX, PARAMETERS]),
-}
+import yaml
 
 
 class Pump:
@@ -70,7 +65,7 @@ class Pump:
 
 @dataclass
 class State:
-    """Tracks the current state of the app."""
+    """Tracks the current state of the autodoser."""
 
     control: bool = False
     should_calibrate: bool = False
@@ -86,10 +81,24 @@ class State:
         )
 
 
+@dataclass
+class AppConfig:
+    """Configures the Application."""
+
+    topic_prefix: str = "hydro"
+    log_level: str = "INFO"
+    motor_pin: int = 0
+
+    def __repr__(self):
+        return "<\n%s\n>" % str(
+            "\n ".join("%s : %s" % (k, repr(v)) for (k, v) in self.__dict__.items())
+        )
+
+
 def setup_mqtt(on_message: Callable):
     """Setup the MQTT client and subscribe to topics."""
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    #host = "homeassistant.local"
+    # host = "homeassistant.local"
     host = "localhost"
     port = 1883
     username = "hamqtt"
@@ -180,7 +189,55 @@ def calibrate_ec():
     return
 
 
+def process_config(file_path, app_config, current_state):
+    """Process the configuration file."""
+    with open(file_path, "r") as f:
+        yamls = yaml.safe_load(f)
+
+    print("GOT YAMLS", yamls)
+
+    # # Handle individual configuration variables
+    # if not hasattr(logging, config.APP.log_level):
+    #     raise AttributeError(f"Unknown log_level: {config.APP.log_level}")
+
+    # config.APP.poll_interval = eval(config.APP.poll_interval)
+    # config.INFLUX.token = open("TOKEN").readline().strip()
+    # config.BLUELAB.tag_to_stationid = {
+    #     x[0]: x[1] for x in config.BLUELAB.tag_to_stationid
+    # }
+    return
+
+
+CONFIG_FILE = "fufarm_hydro.yml"
 current_state = State()
+app_config = AppConfig()
+if os.path.isfile(CONFIG_FILE):
+    process_config(CONFIG_FILE, app_config, current_state)
+
+sys.exit()
+
+
+LOOP_DELAY = 3
+SEPARATOR = "/"
+CALIBRATE = "calibrate"
+CONTROL = "control"
+EC = "ec"
+PARAMETERS = "parameters"
+TOPICS = {
+    CONTROL: SEPARATOR.join([TOPIC_PREFIX, CONTROL]),
+    CALIBRATE: SEPARATOR.join([TOPIC_PREFIX, CALIBRATE]),
+    EC: "sensors/sensor/ec1",
+    PARAMETERS: SEPARATOR.join([TOPIC_PREFIX, PARAMETERS]),
+}
+
+
+logging.basicConfig(
+    level="DEBUG",
+    format="%(asctime)s rpi: %(message)s",
+)
+_LOG = logging.getLogger()
+
+
 on_mqtt_message = create_on_message(current_state)
 mqtt_client = setup_mqtt(on_mqtt_message)
 ec_pump = Pump(MOTOR_PIN)

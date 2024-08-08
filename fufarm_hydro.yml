@@ -1,0 +1,12 @@
+app:
+  log_level: 'DEBUG'
+  topic_prefix: 'hydro'
+  motor_pin: 0
+state:
+  control: False
+  should_calibrate: False
+  equilibration_time: 3
+  current_ec: 10.0
+  target_ec: 1.8
+  last_dose_time: 0
+  dose_duration: 5
