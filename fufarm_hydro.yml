@@ -1,8 +1,12 @@
 app:
-  motor_pin: 3
-  log_level: "DEBUG"
+  host: "localhost"
+  port: 1883
+  username: "hamqtt"
+  password: "UbT4Rn3oY7!S9L"
   topic_prefix: "hydro"
   ec_prefix: "sensors/sensor/ec1"
+  motor_pin: 0
+  log_level: "DEBUG"
 state:
   control: False
   should_calibrate: False

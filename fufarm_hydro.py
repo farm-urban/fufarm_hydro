@@ -2,10 +2,14 @@
 
 Example configuration fufarm_hydro.yml file:
 app:
+  host: "localhost"
+  port: 1883
+  username: "hamqtt"
+  password: "UbT4Rn3oY7!S9L"
+  topic_prefix: "hydro"
+  ec_prefix: "sensors/sensor/ec1"
   motor_pin: 0
-  log_level: 'DEBUG'
-  topic_prefix: 'hydro'
-  ec_prefix: 'sensors/sensor/ec1'
+  log_level: "DEBUG"
 state:
   control: False
   should_calibrate: False
@@ -31,7 +35,7 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from stateclass import State, AppConfig
+from stateclass import State, AppConfig, process_config
 
 
 class Pump:
@@ -63,14 +67,14 @@ class Pump:
         return
 
 
-def setup_mqtt(on_message: Callable):
+def setup_mqtt(on_message: Callable, app_config: AppConfig):
     """Setup the MQTT client and subscribe to topics."""
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     # host = "homeassistant.local"
-    host = "localhost"
-    port = 1883
-    username = "hamqtt"
-    password = "UbT4Rn3oY7!S9L"
+    host = app_config.host
+    port = app_config.port
+    username = app_config.username
+    password = app_config.password
     client.username_pw_set(username, password)
     client.connect(host, port=port)
     client.on_message = on_message
@@ -185,7 +189,7 @@ _LOG = logging.getLogger()
 
 
 on_mqtt_message = create_on_message(current_state)
-mqtt_client = setup_mqtt(on_mqtt_message)
+mqtt_client = setup_mqtt(on_mqtt_message, app_config)
 ec_pump = Pump(app_config.motor_pin)
 mqtt_client.loop_start()
 

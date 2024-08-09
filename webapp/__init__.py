@@ -9,23 +9,20 @@ import inspect
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
-from stateclass import State, AppConfig
+from stateclass import State, AppConfig, process_config  # noqa: E402, F401
 
+CONFIG_FILE = "fufarm_hydro.yml"
+if os.path.isfile(CONFIG_FILE):
+    app_config, mqtt_state = process_config(CONFIG_FILE)
 
 app = Flask(__name__)
-app.config["MQTT_BROKER_URL"] = "broker.hivemq.com"  # use the free broker from HIVEMQ
-app.config["MQTT_BROKER_PORT"] = 1883  # default port for non-tls connection
-app.config["MQTT_USERNAME"] = (
-    ""  # set the username here if you need authentication for the broker
-)
-app.config["MQTT_PASSWORD"] = (
-    ""  # set the password here if the broker demands authentication
-)
+app.config["MQTT_BROKER_URL"] = app_config.host
+app.config["MQTT_BROKER_PORT"] = app_config.port
+app.config["MQTT_USERNAME"] = app_config.username
+app.config["MQTT_PASSWORD"] = app_config.password
 
 mqtt = Mqtt()
 
-mqtt_state = State()
-app_config = AppConfig()
 
 SEPARATOR = "/"
 CALIBRATE = "calibrate"

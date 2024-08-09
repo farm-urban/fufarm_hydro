@@ -25,10 +25,15 @@ def process_config(
 class AppConfig:
     """Configures the Application."""
 
-    motor_pin: int = 0
-    log_level: str = "INFO"
+    # host = "homeassistant.local"
+    host: str = "localhost"
+    port: int = 1883
+    username: str = "hamqtt"
+    password: str = "UbT4Rn3oY7!S9L"
     topic_prefix: str = "hydro"
     ec_prefix: str = "sensors/sensor/ec1"
+    motor_pin: int = 0
+    log_level: str = "INFO"
 
     def __repr__(self):
         return "<\n%s\n>" % str(
