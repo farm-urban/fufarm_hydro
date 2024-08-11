@@ -85,23 +85,9 @@
 </form>
 <span>= <span id="result"></span></span>
 
+<!-- <script src="{{url_for('static', filename='script.js')}}"></script> -->
+
 <script>
-  function addSubmit(ev) {
-    ev.preventDefault();
-    fetch({{ url_for('add')|tojson }}, {
-      method: 'POST',
-      body: new FormData(this)
-    })
-      .then(response => response.json())
-      .then(addShow);
-  }
-
-
-  function addShow(data) {
-    var span = document.getElementById('result');
-    span.innerText = data.result;
-  }
-
   function getCurrentEC() {
     let url = {{ url_for('status')|tojson }} + '?' + new URLSearchParams({ q: 'current_ec'}).toString();
     fetch(url)
@@ -127,9 +113,6 @@
     span.innerText = data.last_dose_time;
   }
 
-
-  var form = document.getElementById('set-parameters');
-  form.addEventListener('submit', addSubmit);
 
   setInterval(getCurrentEC, 2000);
   setInterval(getLastDosetime, 2000);

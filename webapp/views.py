@@ -4,7 +4,7 @@ from flask import request
 
 import random
 import time
-from . import app
+from . import app, app_state
 
 
 @app.route("/")

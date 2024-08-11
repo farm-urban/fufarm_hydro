@@ -27,7 +27,6 @@ Could look at aiomqtt for async MQTT client
 """
 
 import logging
-import json
 import os
 import time
 
@@ -35,7 +34,12 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from stateclass import State, AppConfig, process_config
+from stateclass import (
+    State,
+    AppConfig,
+    setup_mqtt_topics,
+    process_config,
+)
 
 
 class Pump:
@@ -67,7 +71,7 @@ class Pump:
         return
 
 
-def setup_mqtt(on_message: Callable, app_config: AppConfig):
+def setup_mqtt(on_message: Callable, on_connect: Callable, app_config: AppConfig):
     """Setup the MQTT client and subscribe to topics."""
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     # host = "homeassistant.local"
@@ -82,67 +86,53 @@ def setup_mqtt(on_message: Callable, app_config: AppConfig):
     return client
 
 
-def create_on_message(state: State):
+def create_on_connect(mqtt_topics: dict[str, str]):
+    """Create a callback to handle connection to MQTT broker."""
+
+    def on_connect(client, _userdata, _flags, _reason_code, _properties):
+        """Subscribe to topics on connect."""
+        retcodes = []
+        for topic in mqtt_topics.values():
+            retcodes.append(client.subscribe(topic))
+        if all([retcode[0] == mqtt.MQTT_ERR_SUCCESS for retcode in retcodes]):
+            _LOG.debug("Subscribed to topics: %s", [v for v in mqtt_topics.values()])
+        else:
+            _LOG.warning("Error subscribing to topics: %s", retcodes)
+
+    return on_connect
+
+
+def create_on_message(state: State, mqtt_topics: dict[str, str]) -> Callable:
     """Create a callback to handle incoming MQTT messages."""
 
     def on_message(_client, _userdata, message):
         topic = message.topic
         payload = message.payload.decode("utf-8")
         _LOG.debug("Received message: %s %s", topic, payload)
-        if topic == TOPICS[CALIBRATE]:
+        if topic == mqtt_topics["calibrate"]:
             if payload == "ec":
                 state.should_calibrate = True
             else:
                 _LOG.warning("Invalid payload for calibrate topic: %s", payload)
-        elif topic == TOPICS[CONTROL]:
+        elif topic == mqtt_topics["control"]:
             if payload == "0":
                 state.control = False
             elif payload == "1":
                 state.control = True
             else:
                 _LOG.warning("Invalid payload for control topic: %s", payload)
-        elif topic == TOPICS[EC]:
+        elif topic == mqtt_topics["ec"]:
             try:
                 state.current_ec = float(payload)
             except ValueError as e:
                 _LOG.warning("Error getting EC: %s - %s", payload, e)
                 state.current_ec = -1.0
-        elif topic == TOPICS[PARAMETERS]:
+        elif topic == mqtt_topics["parameters"]:
             process_parameters(payload, state)
 
     # End of on_message
 
     return on_message
-
-
-def process_parameters(payload: str, state: State):
-    """Process the parameters from the MQTT message."""
-    _LOG.debug("Processing parameter update: %s", payload)
-    try:
-        data = json.loads(payload)
-    except json.decoder.JSONDecodeError as e:
-        _LOG.warning(
-            "Error decoding PARAMETERS data to JSON: %s\nMessage was: %s",
-            e.msg,
-            e.doc,
-        )
-    if "dose_duration" in data:
-        state.dose_duration = data["dose_duration"]
-    if "equilibration_time" in data:
-        state.equilibration_time = data["equilibration_time"]
-    if "target_ec" in data:
-        state.target_ec = data["target_ec"]
-
-
-def on_connect(client, _userdata, _flags, _reason_code, _properties):
-    """Subscribe to topics on connect."""
-    retcodes = []
-    for topic in TOPICS.values():
-        retcodes.append(client.subscribe(topic))
-    if all([retcode[0] == mqtt.MQTT_ERR_SUCCESS for retcode in retcodes]):
-        _LOG.debug("Subscribed to topics: %s", [v for v in TOPICS.values()])
-    else:
-        _LOG.warning("Error subscribing to topics: %s", retcodes)
 
 
 def control_ec(state: State, pump: Pump):
@@ -167,19 +157,9 @@ app_config = AppConfig()
 if os.path.isfile(CONFIG_FILE):
     app_config, current_state = process_config(CONFIG_FILE)
 
-LOOP_DELAY = 3
-SEPARATOR = "/"
-CALIBRATE = "calibrate"
-CONTROL = "control"
-EC = "ec"
-PARAMETERS = "parameters"
-TOPICS = {
-    CONTROL: SEPARATOR.join([app_config.topic_prefix, CONTROL]),
-    CALIBRATE: SEPARATOR.join([app_config.topic_prefix, CALIBRATE]),
-    EC: app_config.ec_prefix,
-    PARAMETERS: SEPARATOR.join([app_config.topic_prefix, PARAMETERS]),
-}
+mqtt_topics = setup_mqtt_topics(app_config)
 
+LOOP_DELAY = 3
 
 logging.basicConfig(
     level=app_config.log_level,
@@ -188,8 +168,9 @@ logging.basicConfig(
 _LOG = logging.getLogger()
 
 
-on_mqtt_message = create_on_message(current_state)
-mqtt_client = setup_mqtt(on_mqtt_message, app_config)
+on_mqtt_message = create_on_message(current_state, mqtt_topics)
+on_mqtt_connect = create_on_connect(mqtt_topics)
+mqtt_client = setup_mqtt(on_mqtt_message, on_mqtt_connect, app_config)
 ec_pump = Pump(app_config.motor_pin)
 mqtt_client.loop_start()
 

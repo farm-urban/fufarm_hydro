@@ -1,5 +1,6 @@
 app:
-  host: "localhost"
+  # host: "localhost"
+  host: "homeassistant.local"
   port: 1883
   username: "hamqtt"
   password: "UbT4Rn3oY7!S9L"
