@@ -2,6 +2,7 @@ import logging
 import json
 import time
 from dataclasses import dataclass
+from typing import Callable, List
 import yaml
 
 
@@ -11,6 +12,10 @@ ID_CONTROL = "control"
 ID_CALIBRATE = "calibrate"
 ID_EC = "ec"
 ID_PARAMETERS = "parameters"
+ID_LAST_DOSE_TIME = "last_dose_time"
+ID_DOSE_COUNT = "dose_count"
+ID_TOTAL_DOSE_TIME = "total_dose_time"
+ID_STATE = "state"
 
 
 def process_config(
@@ -22,7 +27,7 @@ def process_config(
         if "app" in yamls:
             _app_config = AppConfig(**yamls["app"])
         if "state" in yamls:
-            _current_state = State(**yamls["state"])
+            _current_state = AppState(**yamls["state"])
 
     if not hasattr(logging, _app_config.log_level):
         raise AttributeError(f"Unknown log_level: {_app_config.APP.log_level}")
@@ -51,16 +56,36 @@ class AppConfig:
 
 
 @dataclass
-class State:
+class AppState:
     """Tracks the current state of the autodoser."""
 
+    # Control variables
     control: bool = False
     should_calibrate: bool = False
     equilibration_time: int = 3
-    current_ec: float = 10.0  # Set to a high value to prevent dosing before reading EC
     target_ec: float = 1.8
-    last_dose_time: float = time.time() - equilibration_time
     dose_duration: int = 5
+    # State variables
+    current_ec: float = 10.0  # Set to a high value to prevent dosing before reading EC
+    dose_count: int = 0
+    last_dose_time: float = time.time() - equilibration_time
+    total_dose_time: float = 0
+
+    def status_dict(self):
+        """Return the status variables as a dictionary."""
+        return dict(
+            {
+                "current_ec": self.current_ec,
+                "dose_count": self.dose_count,
+                "last_dose_time": time.strftime(
+                    "%a, %d %b %Y %H:%M:%S", time.localtime(self.last_dose_time)
+                ),
+                "total_dose_time": self.total_dose_time,
+            }
+        )
+
+    def status_json(self):
+        return json.dumps(self.status_dict())
 
     def __repr__(self):
         return "<\n%s\n>" % str(
@@ -76,12 +101,108 @@ def setup_mqtt_topics(app_config: AppConfig) -> dict[str, str]:
         ID_CALIBRATE: separator.join([app_config.topic_prefix, ID_CALIBRATE]),
         ID_EC: app_config.ec_prefix,
         ID_PARAMETERS: separator.join([app_config.topic_prefix, ID_PARAMETERS]),
+        ID_STATE: separator.join([app_config.topic_prefix, ID_STATE]),
     }
 
 
-def process_parameters(payload: str, state: State):
-    """Process the parameters from the MQTT message."""
-    _LOG.debug("Processing parameter update: %s", payload)
+def create_on_connect(
+    mqtt_topics: dict[str, str], flask_decorator: Callable = None
+) -> Callable:
+    """Create a callback to handle connection to MQTT broker."""
+
+    # @mqtt.on_connect()
+    def on_mqtt_connect(client, _userdata, _flags, _reason_code):
+        # def on_connect(client, _userdata, _flags, _reason_code, _properties):
+        """Subscribe to topics on connect."""
+        retcodes = []
+        for topic in mqtt_topics.values():
+            retcodes.append(client.subscribe(topic))
+        if all([retcode[0] == 0 for retcode in retcodes]):
+            _LOG.debug("Subscribed to topics: %s", [v for v in mqtt_topics.values()])
+        else:
+            _LOG.warning("Error subscribing to topics: %s", retcodes)
+
+    if flask_decorator:
+        # Not sure how to call the decorator when it's an object method
+        # on_mqtt_connect = flask_decorator(on_mqtt_connect)
+        @flask_decorator()
+        def decorated_on_mqtt_connect(client, _userdata, _flags, _reason_code):
+            return on_mqtt_connect(client, _userdata, _flags, _reason_code)
+
+    if flask_decorator:
+        return decorated_on_mqtt_connect
+    else:
+        return on_mqtt_connect
+
+
+def create_on_message(
+    state: AppState, mqtt_topics: dict[str, str], flask_decorator: Callable = None
+) -> Callable:
+    """Create a callback to handle incoming MQTT messages."""
+
+    # @mqtt.on_message()
+    def on_mqtt_message(_client, _userdata, message):
+        topic = message.topic
+        payload = message.payload.decode("utf-8")
+        _LOG.debug("Received message: %s %s", topic, payload)
+        if topic == mqtt_topics[ID_CALIBRATE]:
+            if payload == "ec":
+                state.should_calibrate = True
+            else:
+                _LOG.warning("Invalid payload for calibrate topic: %s", payload)
+        elif topic == mqtt_topics[ID_CONTROL]:
+            if payload == "0":
+                state.control = False
+            elif payload == "1":
+                state.control = True
+            else:
+                _LOG.warning("Invalid payload for control topic: %s", payload)
+        elif topic == mqtt_topics[ID_EC]:
+            try:
+                state.current_ec = float(payload)
+            except ValueError as e:
+                _LOG.warning("Error getting EC: %s - %s", payload, e)
+                state.current_ec = -1.0
+        elif topic == mqtt_topics[ID_PARAMETERS]:
+            variables = ["dose_duration", "equilibration_time", "target_ec"]
+            process_variables(payload, state, variables)
+        elif topic == mqtt_topics[ID_STATE]:
+            variables = [
+                "current_ec",
+                "dose_count",
+                "last_dose_time",
+                "total_dose_time",
+            ]
+            process_variables(payload, state, variables)
+
+    # End of on_message
+    if flask_decorator:
+        # Not sure how to call the decorator when it's an object method
+        # on_mqtt_message = flask_decorator(on_mqtt_message)
+        @flask_decorator()
+        def decorated_on_mqtt_message(_client, _userdata, message):
+            return on_mqtt_message(_client, _userdata, message)
+
+    if flask_decorator:
+        return decorated_on_mqtt_message
+    else:
+        return on_mqtt_message
+
+
+def process_entries(state: AppState, data: dict, keys: List[str]):
+    "Helper function"
+    for k in keys:
+        if k in data:
+            setattr(state, k, data[k])
+        else:
+            _LOG.warning(
+                "process_entries: could not find key '%s' in data: %s", k, data.keys()
+            )
+
+
+def process_variables(payload: str, state: AppState, variables: List[str]):
+    """Process the variables from an MQTT message."""
+    _LOG.debug("Processing variable update: %s for keys: %s", payload, variables)
     try:
         data = json.loads(payload)
     except json.decoder.JSONDecodeError as e:
@@ -90,9 +211,4 @@ def process_parameters(payload: str, state: State):
             e.msg,
             e.doc,
         )
-    if "dose_duration" in data:
-        state.dose_duration = data["dose_duration"]
-    if "equilibration_time" in data:
-        state.equilibration_time = data["equilibration_time"]
-    if "target_ec" in data:
-        state.target_ec = data["target_ec"]
+    process_entries(state, data, variables)
