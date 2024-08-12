@@ -77,9 +77,10 @@ class AppState:
             {
                 "current_ec": self.current_ec,
                 "dose_count": self.dose_count,
-                "last_dose_time": time.strftime(
-                    "%a, %d %b %Y %H:%M:%S", time.localtime(self.last_dose_time)
-                ),
+                # "last_dose_time": time.strftime(
+                #     "%a, %d %b %Y %H:%M:%S", time.localtime(self.last_dose_time)
+                # ),
+                "last_dose_time": self.last_dose_time,
                 "total_dose_time": self.total_dose_time,
             }
         )
@@ -106,7 +107,9 @@ def setup_mqtt_topics(app_config: AppConfig) -> dict[str, str]:
 
 
 def create_on_connect(
-    mqtt_topics: dict[str, str], flask_decorator: Callable = None
+    subscribe_list: List[str],
+    mqtt_topics: dict[str, str],
+    flask_decorator: Callable = None,
 ) -> Callable:
     """Create a callback to handle connection to MQTT broker."""
 
@@ -115,10 +118,13 @@ def create_on_connect(
         # def on_connect(client, _userdata, _flags, _reason_code, _properties):
         """Subscribe to topics on connect."""
         retcodes = []
-        for topic in mqtt_topics.values():
-            retcodes.append(client.subscribe(topic))
+        subscribed = []
+        for name, topic in mqtt_topics.items():
+            if name in subscribe_list:
+                retcodes.append(client.subscribe(topic))
+                subscribed.append(topic)
         if all([retcode[0] == 0 for retcode in retcodes]):
-            _LOG.debug("Subscribed to topics: %s", [v for v in mqtt_topics.values()])
+            _LOG.debug("Subscribed to topics: %s", subscribed)
         else:
             _LOG.warning("Error subscribing to topics: %s", retcodes)
 

@@ -11,7 +11,8 @@ import inspect
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 PARENT_DIR = os.path.dirname(currentdir)
 sys.path.insert(0, PARENT_DIR)
-from stateclass import (
+from util import (
+    ID_STATE,
     create_on_connect,
     create_on_message,
     process_config,
@@ -38,7 +39,7 @@ app.config["MQTT_PASSWORD"] = app_config.password
 mqtt = Mqtt(app)
 
 mqtt_topics = setup_mqtt_topics(app_config)
-create_on_connect(mqtt_topics, flask_decorator=mqtt.on_connect)
+create_on_connect([ID_STATE], mqtt_topics, flask_decorator=mqtt.on_connect)
 create_on_message(app_state, mqtt_topics, flask_decorator=mqtt.on_message)
 
 

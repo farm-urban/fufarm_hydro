@@ -34,10 +34,13 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from stateclass import (
+from util import (
+    ID_CALIBRATE,
     ID_CONTROL,
     ID_DOSE_COUNT,
+    ID_EC,
     ID_LAST_DOSE_TIME,
+    ID_PARAMETERS,
     ID_STATE,
     ID_TOTAL_DOSE_TIME,
     AppState,
@@ -112,7 +115,9 @@ def control_ec(
             state.last_dose_time = time.time()
             state.dose_count += 1
             state.total_dose_time += state.dose_duration
-            client.publish(topics[ID_STATE], state.status_json(), qos=1, retain=True)
+            status_json = state.status_json()
+            _LOG.debug("Publishing state: %s", status_json)
+            client.publish(topics[ID_STATE], status_json, qos=1, retain=True)
     return
 
 
@@ -140,7 +145,9 @@ _LOG = logging.getLogger()
 
 
 on_mqtt_message = create_on_message(current_state, mqtt_topics)
-on_mqtt_connect = create_on_connect(mqtt_topics)
+on_mqtt_connect = create_on_connect(
+    [ID_CONTROL, ID_CALIBRATE, ID_EC, ID_PARAMETERS], mqtt_topics
+)
 mqtt_client = setup_mqtt(on_mqtt_message, on_mqtt_connect, app_config)
 ec_pump = Pump(app_config.motor_pin)
 mqtt_client.loop_start()

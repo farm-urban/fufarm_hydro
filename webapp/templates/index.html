@@ -100,7 +100,7 @@
     let ecspan = document.getElementById('current-ec');
     ecspan.innerText = data.state.current_ec;
     let dosespan = document.getElementById('last-dosetime');
-    dosespan.innerText = data.state.last_dose_time;
+    dosespan.innerText = new Date(data.state.last_dose_time * 1000);
     let lspan = document.getElementById('logoutput');
     lspan.innerText = JSON.stringify(data.state, null, 2);
   }
