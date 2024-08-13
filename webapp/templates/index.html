@@ -38,7 +38,6 @@
   <label for="calibrate">Run Calibration: </label>
   <input id="calibrate-btn" type="submit" value="Calibrate" />
 </div> -->
-<hr />
 <div class="group">
   <label for="current-ec">Current EC:&nbsp</label>
   <output id="current-ec">42</output>
@@ -47,13 +46,13 @@
   <label for="last-dosetime">Last Dose Time:&nbsp</label>
   <output id="last-dosetime">14:15</output>
 </div>
-<div class="group">
+<!-- <div class="group">
   <label>LogOutput: </label>
   <textarea id="logoutput" name="logout" rows="10" cols="50">FOO</textarea>
-</div>
+</div> -->
 <hr />
 <h4>Control Parameters</h4>
-<form id="set-parameters">
+<form id="set-parameters-form">
   <div>
     <div class="group">
       <label for="select">Mode: </label>
@@ -81,9 +80,25 @@
       <label for="dose-duration">Dose duration (s): </label>
       <input id="dose-duration" name="dose-duration" type="number" step="1" />
     </div>
-    <input id="submit-btn" type="submit" value="Submit" />
+    <input id="submit-params-btn" type="submit" value="Submit" />
   </div>
 </form>
+
+<hr />
+<h4>Actions</h4>
+<!-- <div class="group">
+  <label for="calibrate">Run Calibration: </label>
+  <input id="calibrate-btn" type="submit" value="Calibrate" />
+</div> -->
+<form id="manual-dose-form">
+  <label>Manual Dose:</label
+  ><input name="manual-dose-duration" type="number" step="1" /><input
+    id="submit-dose-btn"
+    type="submit"
+    value="Dose"
+  />
+</form>
+<label>Calibrate EC Probe</label>
 
 <script>
   {#
@@ -112,10 +127,25 @@
     lspan.innerText = JSON.stringify(data.state, null, 2);
   }
 
-  function addSubmit(ev) {
+  function addParamsSubmit(ev) {
     ev.preventDefault();
     const formData = new FormData(this);
     fetch({{ url_for('control')|tojson }}, {
+      method: 'POST',
+      body: formData
+    })
+      // .then(response => response.json())
+      // .then(response => console.log(`Response XX: ${JSON.stringify(response,null,2)}`));
+  }
+
+  var form = document.getElementById('set-parameters-form');
+  form.addEventListener('submit', addParamsSubmit);
+
+
+  function addDoseSubmit(ev) {
+    ev.preventDefault();
+    const formData = new FormData(this);
+    fetch({{ url_for('dose')|tojson }}, {
       // headers: {
       //   "Content-Type": "application/json",
       // },
@@ -126,8 +156,8 @@
       // .then(response => console.log(`Response XX: ${JSON.stringify(response,null,2)}`));
   }
 
-  var form = document.getElementById('set-parameters');
-  form.addEventListener('submit', addSubmit);
+  var form = document.getElementById('manual-dose-form');
+  form.addEventListener('submit', addDoseSubmit);
 
   setInterval(updateState, 2000);
 </script>

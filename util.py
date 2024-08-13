@@ -8,14 +8,17 @@ import yaml
 
 _LOG = logging.getLogger(__name__)
 
+# MQTT topics
 ID_CONTROL = "control"
 ID_CALIBRATE = "calibrate"
 ID_EC = "ec"
+ID_MANUAL_DOSE = "manual_dose"
 ID_PARAMETERS = "parameters"
+ID_STATE = "state"
+# Individual parametsrs
 ID_LAST_DOSE_TIME = "last_dose_time"
 ID_DOSE_COUNT = "dose_count"
 ID_TOTAL_DOSE_TIME = "total_dose_time"
-ID_STATE = "state"
 
 
 def process_config(
@@ -62,6 +65,8 @@ class AppState:
     # Control variables
     control: bool = False
     should_calibrate: bool = False
+    manual_dose: bool = False
+    manual_dose_duration: int = 0
     equilibration_time: int = 3
     target_ec: float = 1.8
     dose_duration: int = 5
@@ -101,6 +106,7 @@ def setup_mqtt_topics(app_config: AppConfig) -> dict[str, str]:
         ID_CONTROL: separator.join([app_config.topic_prefix, ID_CONTROL]),
         ID_CALIBRATE: separator.join([app_config.topic_prefix, ID_CALIBRATE]),
         ID_EC: app_config.ec_prefix,
+        ID_MANUAL_DOSE: separator.join([app_config.topic_prefix, ID_MANUAL_DOSE]),
         ID_PARAMETERS: separator.join([app_config.topic_prefix, ID_PARAMETERS]),
         ID_STATE: separator.join([app_config.topic_prefix, ID_STATE]),
     }
@@ -169,6 +175,15 @@ def create_on_message(
             except ValueError as e:
                 _LOG.warning("Error getting EC: %s - %s", payload, e)
                 state.current_ec = -1.0
+        elif topic == mqtt_topics[ID_MANUAL_DOSE]:
+            try:
+                state.manual_dose_duration = int(payload)
+            except ValueError as e:
+                _LOG.warning("Error getting manual dose duration: %s - %s", payload, e)
+                state.manual_dose = False
+                state.manual_dose_duration = 0
+                return
+            state.manual_dose = True
         elif topic == mqtt_topics[ID_PARAMETERS]:
             variables = ["dose_duration", "equilibration_time", "target_ec"]
             process_variables(payload, state, variables)

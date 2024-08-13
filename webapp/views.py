@@ -1,10 +1,13 @@
 from flask import jsonify
 from flask import render_template
 from flask import request
+import logging
 
 from . import app, app_state, mqtt, mqtt_topics
 
-from util import ID_CONTROL
+from util import ID_CONTROL, ID_MANUAL_DOSE
+
+_LOG = logging.getLogger(__name__)
 
 
 @app.route("/")
@@ -23,7 +26,7 @@ def control():
         app_state.control = False
         changed = True
     if changed:
-        print("Publishing control: ", app_state.control)
+        _LOG.debug("Publishing control: %s", app_state.control)
         mqtt.publish(mqtt_topics[ID_CONTROL], "1" if app_state.control else "0")
 
     # target_ec = request.form["target-ec"]
@@ -32,8 +35,21 @@ def control():
     #     print("Publishing target_ec: ", app_state.target_ec)
     #     mqtt.publish(mqtt_topics[ID_CONTROL], str(app_state.target_ec))
 
-    data = {"status": "success"}
-    return data, 200
+    return {"status": "success"}, 200
+
+
+@app.route("/dose", methods=["POST"])
+def dose():
+    duration = request.form["manual-dose-duration"]
+    try:
+        duration = int(duration)
+    except ValueError:
+        _LOG.debug("Error getting dose duration: %s", duration)
+        data = {"status": "failure"}
+        return data, 422
+    _LOG.debug("Publishing manual dose: %s", duration)
+    mqtt.publish(mqtt_topics[ID_MANUAL_DOSE], str(duration))
+    return {"status": "success"}, 200
 
 
 @app.route("/status")

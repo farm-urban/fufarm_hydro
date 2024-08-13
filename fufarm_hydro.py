@@ -37,12 +37,10 @@ import paho.mqtt.client as mqtt
 from util import (
     ID_CALIBRATE,
     ID_CONTROL,
-    ID_DOSE_COUNT,
     ID_EC,
-    ID_LAST_DOSE_TIME,
+    ID_MANUAL_DOSE,
     ID_PARAMETERS,
     ID_STATE,
-    ID_TOTAL_DOSE_TIME,
     AppState,
     AppConfig,
     create_on_connect,
@@ -127,6 +125,21 @@ def calibrate_ec():
     return
 
 
+def manual_dose(
+    state: AppState, pump: Pump, client: mqtt.Client, topics: dict[str, str]
+):
+    """Dose for a given duration"""
+    pump.run(state.manual_dose_duration)
+    state.last_dose_time = time.time()
+    state.dose_count += 1
+    state.total_dose_time += state.manual_dose_duration
+    status_json = state.status_json()
+    _LOG.debug("Publishing state following manual dose: %s", status_json)
+    client.publish(topics[ID_STATE], status_json, qos=1, retain=True)
+    current_state.manual_dose = False
+    return
+
+
 CONFIG_FILE = "fufarm_hydro.yml"
 current_state = AppState()
 app_config = AppConfig()
@@ -146,7 +159,7 @@ _LOG = logging.getLogger()
 
 on_mqtt_message = create_on_message(current_state, mqtt_topics)
 on_mqtt_connect = create_on_connect(
-    [ID_CONTROL, ID_CALIBRATE, ID_EC, ID_PARAMETERS], mqtt_topics
+    [ID_CONTROL, ID_CALIBRATE, ID_EC, ID_MANUAL_DOSE, ID_PARAMETERS], mqtt_topics
 )
 mqtt_client = setup_mqtt(on_mqtt_message, on_mqtt_connect, app_config)
 ec_pump = Pump(app_config.motor_pin)
@@ -162,6 +175,9 @@ while True:
 
     if current_state.should_calibrate:
         calibrate_ec()
+
+    if current_state.manual_dose:
+        manual_dose(current_state, ec_pump, mqtt_client, mqtt_topics)
 
     if current_state.control:
         control_ec(current_state, ec_pump, mqtt_client, mqtt_topics)
