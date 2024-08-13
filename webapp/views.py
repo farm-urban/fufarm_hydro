@@ -1,3 +1,5 @@
+"""Routing functions"""
+
 import json
 import logging
 import time
@@ -5,13 +7,14 @@ from flask import jsonify
 from flask import render_template
 from flask import request
 
+from util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
 from . import app, app_state, mqtt, mqtt_topics
 
-from util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
 
 _LOG = logging.getLogger(__name__)
 
 
+# pylint: disable=missing-function-docstring
 @app.template_filter("format_time")
 def format_time_filter(s):
     return time.asctime(time.localtime(s))
@@ -99,7 +102,4 @@ def calibrate_ec():
 
 @app.route("/status")
 def status():
-    # q = request.args.get("q")
-    # if q == "current_ec":
-    #     return jsonify(ec=round(app_state.current_ec, 2))
     return jsonify(state=app_state.status_dict())

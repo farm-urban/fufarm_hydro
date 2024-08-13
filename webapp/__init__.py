@@ -1,16 +1,18 @@
-from typing import Callable
-from flask import Flask
-from flask_mqtt import Mqtt
+""""Main Flask App"""
 
+import inspect
 import logging
 import os
 import sys
-import inspect
+
+from flask import Flask
+from flask_mqtt import Mqtt
 
 # Hack import for time being
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 PARENT_DIR = os.path.dirname(currentdir)
 sys.path.insert(0, PARENT_DIR)
+# pylint: disable=wrong-import-position
 from util import (
     ID_STATE,
     create_on_connect,

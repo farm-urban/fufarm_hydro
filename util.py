@@ -1,3 +1,5 @@
+"""Functions shared between command-line and flask app"""
+
 import logging
 import json
 import time
@@ -53,9 +55,8 @@ class AppConfig:
     log_level: str = "INFO"
 
     def __repr__(self):
-        return "<\n%s\n>" % str(
-            "\n ".join("%s : %s" % (k, repr(v)) for (k, v) in self.__dict__.items())
-        )
+        x = "\n ".join(f"{k} : {repr(v)}" for (k, v) in self.__dict__.items())
+        return f"<\n{x}\n>"
 
 
 @dataclass
@@ -91,12 +92,12 @@ class AppState:
         )
 
     def status_json(self):
+        """Return status as json string"""
         return json.dumps(self.status_dict())
 
     def __repr__(self):
-        return "<\n%s\n>" % str(
-            "\n ".join("%s : %s" % (k, repr(v)) for (k, v) in self.__dict__.items())
-        )
+        x = "\n ".join(f"{k} : {repr(v)}" for (k, v) in self.__dict__.items())
+        return f"<\n{x}\n>"
 
 
 def setup_mqtt_topics(app_config: AppConfig) -> dict[str, str]:
