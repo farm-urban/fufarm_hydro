@@ -119,9 +119,11 @@ def control_ec(
     return
 
 
-def calibrate_ec():
+def calibrate_ec(state: AppState):
     """Calibrate the EC sensor"""
     _LOG.info("Calibrating EC sensor")
+    time.sleep(5)
+    current_state.should_calibrate_ec = False
     return
 
 
@@ -173,8 +175,8 @@ while True:
         time.sleep(2)
     _LOG.info("%s", current_state)
 
-    if current_state.should_calibrate:
-        calibrate_ec()
+    if current_state.should_calibrate_ec:
+        calibrate_ec(current_state)
 
     if current_state.manual_dose:
         manual_dose(current_state, ec_pump, mqtt_client, mqtt_topics)

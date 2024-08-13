@@ -80,7 +80,7 @@
       <label for="dose-duration">Dose duration (s): </label>
       <input id="dose-duration" name="dose-duration" type="number" step="1" />
     </div>
-    <input id="submit-params-btn" type="submit" value="Submit" />
+    <input type="submit" value="Submit" />
   </div>
 </form>
 
@@ -92,13 +92,18 @@
 </div> -->
 <form id="manual-dose-form">
   <label>Manual Dose:</label
-  ><input name="manual-dose-duration" type="number" step="1" /><input
-    id="submit-dose-btn"
+  ><input name="manual-dose-duration" type="number" step="1" value="10" /><input
     type="submit"
     value="Dose"
   />
 </form>
-<label>Calibrate EC Probe</label>
+<form id="calibrate-ecprobe">
+  <label>Calibrate EC Probe:</label
+  ><input name="calibrate-ecprobe-check" type="hidden" value="333" /><input
+    type="submit"
+    value="Calibrate"
+  />
+</form>
 
 <script>
   {#
@@ -123,8 +128,8 @@
     ecspan.innerText = data.state.current_ec;
     let dosespan = document.getElementById('last-dosetime');
     dosespan.innerText = new Date(data.state.last_dose_time * 1000);
-    let lspan = document.getElementById('logoutput');
-    lspan.innerText = JSON.stringify(data.state, null, 2);
+    // let lspan = document.getElementById('logoutput');
+    // lspan.innerText = JSON.stringify(data.state, null, 2);
   }
 
   function addParamsSubmit(ev) {
@@ -158,6 +163,23 @@
 
   var form = document.getElementById('manual-dose-form');
   form.addEventListener('submit', addDoseSubmit);
+
+  function addCalibrateSubmit(ev) {
+    ev.preventDefault();
+    const formData = new FormData(this);
+    fetch({{ url_for('calibrate_ec')|tojson }}, {
+      // headers: {
+      //   "Content-Type": "application/json",
+      // },
+      method: 'POST',
+      body: formData
+    })
+      // .then(response => response.json())
+      // .then(response => console.log(`Response XX: ${JSON.stringify(response,null,2)}`));
+  }
+
+  var form = document.getElementById('calibrate-ecprobe');
+  form.addEventListener('submit', addCalibrateSubmit);
 
   setInterval(updateState, 2000);
 </script>

@@ -10,7 +10,7 @@ _LOG = logging.getLogger(__name__)
 
 # MQTT topics
 ID_CONTROL = "control"
-ID_CALIBRATE = "calibrate"
+ID_CALIBRATE = "calibrate_ec"
 ID_EC = "ec"
 ID_MANUAL_DOSE = "manual_dose"
 ID_PARAMETERS = "parameters"
@@ -64,7 +64,7 @@ class AppState:
 
     # Control variables
     control: bool = False
-    should_calibrate: bool = False
+    should_calibrate_ec: bool = False
     manual_dose: bool = False
     manual_dose_duration: int = 0
     equilibration_time: int = 3
@@ -159,7 +159,7 @@ def create_on_message(
         _LOG.debug("Received message: %s %s", topic, payload)
         if topic == mqtt_topics[ID_CALIBRATE]:
             if payload == "ec":
-                state.should_calibrate = True
+                state.should_calibrate_ec = True
             else:
                 _LOG.warning("Invalid payload for calibrate topic: %s", payload)
         elif topic == mqtt_topics[ID_CONTROL]:

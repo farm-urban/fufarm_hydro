@@ -5,7 +5,7 @@ import logging
 
 from . import app, app_state, mqtt, mqtt_topics
 
-from util import ID_CONTROL, ID_MANUAL_DOSE
+from util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE
 
 _LOG = logging.getLogger(__name__)
 
@@ -49,6 +49,20 @@ def dose():
         return data, 422
     _LOG.debug("Publishing manual dose: %s", duration)
     mqtt.publish(mqtt_topics[ID_MANUAL_DOSE], str(duration))
+    return {"status": "success"}, 200
+
+
+@app.route("/calibrate_ec", methods=["POST"])
+def calibrate_ec():
+    check = request.form["calibrate-ecprobe-check"]
+    try:
+        check = int(check)
+    except ValueError:
+        _LOG.debug("Error getting calibrate-check: %s", check)
+        data = {"status": "failure"}
+        return data, 422
+    _LOG.debug("Publishing calibrate ecprobe")
+    mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
     return {"status": "success"}, 200
 
 
