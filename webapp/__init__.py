@@ -3,6 +3,7 @@
 import inspect
 import logging
 import os
+import socket
 import sys
 
 from flask import Flask
@@ -38,7 +39,11 @@ app.config["MQTT_BROKER_PORT"] = app_config.port
 app.config["MQTT_USERNAME"] = app_config.username
 app.config["MQTT_PASSWORD"] = app_config.password
 
-mqtt = Mqtt(app)
+try:
+    mqtt = Mqtt(app)
+except socket.gaierror as e:
+    _LOG.error("Error connecting to MQTT broker: %s", e)
+    sys.exit(1)
 
 mqtt_topics = setup_mqtt_topics(app_config)
 create_on_connect([ID_STATE], mqtt_topics, flask_decorator=mqtt.on_connect)

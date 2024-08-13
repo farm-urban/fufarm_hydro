@@ -1,0 +1,16 @@
+.group {
+  display: flex;
+  flex-direction: row;
+}
+form {
+  display: flex;
+}
+label > input {
+  width: 3em;
+}
+form > * {
+  padding-right: 1em;
+}
+#result {
+  font-weight: bold;
+}
