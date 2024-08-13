@@ -44,29 +44,28 @@ def control():
         return {"status": "failure"}, 422
     dose_duration = request.form["dose-duration"]
     try:
-        dose_duration = float(dose_duration)
+        dose_duration = int(dose_duration)
     except ValueError:
         _LOG.debug("Error getting dose_duration: %s", target_ec)
         return {"status": "failure"}, 422
     equilibration_time = request.form["equilibration-time"]
     try:
-        equilibration_time = float(equilibration_time)
+        equilibration_time = int(equilibration_time)
     except ValueError:
         _LOG.debug("Error getting equilibration_time: %s", equilibration_time)
         return {"status": "failure"}, 422
 
     parameters = {}
     if target_ec != app_state.target_ec:
-        _LOG.debug("Updating target_ec to: %s", target_ec)
         parameters["target_ec"] = target_ec
     if dose_duration != app_state.dose_duration:
-        _LOG.debug("Updating dose_duration to: %s", dose_duration)
         parameters["dose_duration"] = dose_duration
     if equilibration_time != app_state.equilibration_time:
-        _LOG.debug("Updating equilibration_time to: %s", equilibration_time)
         parameters["equilibration_time"] = equilibration_time
 
+    _LOG.debug("control setting parameters: %s", parameters)
     mqtt.publish(mqtt_topics[ID_PARAMETERS], json.dumps(parameters))
+
     return jsonify(parameters=parameters)
 
 

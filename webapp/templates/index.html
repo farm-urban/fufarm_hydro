@@ -73,6 +73,7 @@
       <label for="target-ec">Target EC: </label>
       <input
         name="target-ec"
+        id="target-ec"
         type="number"
         step="0.1"
         value="{{ app_state.target_ec }}"
@@ -155,19 +156,28 @@
   function addParamsSubmit(ev) {
     ev.preventDefault();
     const formData = new FormData(this);
-    for (const pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
-    }
     fetch({{ url_for('control')|tojson }}, {
       method: 'POST',
       body: formData
     })
-  //     .then(response => response.json())
-  //     .then(response => console.log(`Params response XX: ${JSON.stringify(response,null,2)}`));
+      .then(response => response.json())
+      .then(response => paramsUpdate(response.parameters));
   }
 
-  function paramsUpdate(data) {
-    console.log("TODO");
+  function paramsUpdate(parameters) {
+    // We reset the parameters in case the server has changed them
+    if ( 'dose_duration' in parameters) {
+      const dose_duration = document.getElementById('dose-duration');
+      dose_duration.value = parameters.dose_duration;
+    }
+    if ( 'equilibration_time' in parameters ) {
+      const equilibration_time = document.getElementById('equilibration-time');
+      equilibration_time.value = parameters.equilibration_time;
+    }
+    if ( 'target_ec' in parameters ) {
+      const target_ec = document.getElementById('target-ec');
+      target_ec.value = parameters.target_ec;
+    }
   }
 
   var form = document.getElementById('set-parameters-form');
