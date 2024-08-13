@@ -46,6 +46,14 @@
   <label for="last-dosetime">Last Dose Time:&nbsp</label>
   <output id="last-dosetime">14:15</output>
 </div>
+<div class="group">
+  <label for="dose-count">Dose Count:&nbsp</label>
+  <output id="dose-count">0</output>
+</div>
+<div class="group">
+  <label for="total-dose-time">Total Dose Time (s):&nbsp</label>
+  <output id="total-dose-time">0</output>
+</div>
 <!-- <div class="group">
   <label>LogOutput: </label>
   <textarea id="logoutput" name="logout" rows="10" cols="50">FOO</textarea>
@@ -124,12 +132,14 @@
   }
 
   function updateStatus(data) {
-    let ecspan = document.getElementById('current-ec');
-    ecspan.innerText = data.state.current_ec;
-    let dosespan = document.getElementById('last-dosetime');
-    dosespan.innerText = new Date(data.state.last_dose_time * 1000);
-    // let lspan = document.getElementById('logoutput');
-    // lspan.innerText = JSON.stringify(data.state, null, 2);
+    const current_ec = document.getElementById('current-ec');
+    current_ec.innerText = data.state.current_ec;
+    const dose_time = document.getElementById('last-dosetime');
+    dose_time.innerText = new Date(data.state.last_dose_time * 1000);
+    const dose_count = document.getElementById('dose-count');
+    dose_count.innerText = data.state.dose_count;
+    const total_dose_time = document.getElementById('total-dose-time');
+    total_dose_time.innerText = data.state.total_dose_time
   }
 
   function addParamsSubmit(ev) {
