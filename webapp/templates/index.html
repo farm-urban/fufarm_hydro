@@ -34,10 +34,6 @@
 <h1>FuFarm Autodoser</h1>
 <hr />
 <h4>Current Values</h4>
-<!-- <div class="group">
-  <label for="calibrate">Run Calibration: </label>
-  <input id="calibrate-btn" type="submit" value="Calibrate" />
-</div> -->
 <div class="group">
   <label for="current-ec">Current EC:&nbsp</label>
   <output id="current-ec">{{app_state.current_ec}}</output>
@@ -105,10 +101,6 @@
 
 <hr />
 <h4>Actions</h4>
-<!-- <div class="group">
-  <label for="calibrate">Run Calibration: </label>
-  <input id="calibrate-btn" type="submit" value="Calibrate" />
-</div> -->
 <form id="manual-dose-form">
   <label>Manual Dose:</label
   ><input name="manual-dose-duration" type="number" step="1" value="10" /><input
@@ -188,9 +180,6 @@
     ev.preventDefault();
     const formData = new FormData(this);
     fetch({{ url_for('dose')|tojson }}, {
-      // headers: {
-      //   "Content-Type": "application/json",
-      // },
       method: 'POST',
       body: formData
     })
@@ -203,9 +192,6 @@
     ev.preventDefault();
     const formData = new FormData(this);
     fetch({{ url_for('calibrate_ec')|tojson }}, {
-      // headers: {
-      //   "Content-Type": "application/json",
-      // },
       method: 'POST',
       body: formData
     })
