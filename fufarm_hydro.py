@@ -173,7 +173,7 @@ while True:
         _LOG.warning("mqtt_client not connected")
         mqtt_client.reconnect()
         time.sleep(2)
-    _LOG.info("%s", current_state)
+    _LOG.debug("%s", current_state)
 
     if current_state.should_calibrate_ec:
         calibrate_ec(current_state)
