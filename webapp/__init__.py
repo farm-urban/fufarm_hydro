@@ -5,9 +5,12 @@ import logging
 import os
 import socket
 import sys
+import threading
+import time
 
 from flask import Flask
 from flask_mqtt import Mqtt
+
 
 # Hack import for time being
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -16,6 +19,7 @@ sys.path.insert(0, PARENT_DIR)
 # pylint: disable=wrong-import-position
 from util import (
     ID_STATE,
+    AppState,
     create_on_connect,
     create_on_message,
     process_config,
@@ -48,6 +52,16 @@ except socket.gaierror as e:
 mqtt_topics = setup_mqtt_topics(app_config)
 create_on_connect([ID_STATE], mqtt_topics, flask_decorator=mqtt.on_connect)
 create_on_message(app_state, mqtt_topics, flask_decorator=mqtt.on_message)
+
+
+# def myloop(app_state: AppState):
+#     """Test loop"""
+#     while True:
+#         print(app_state)
+#         time.sleep(5)
+
+# thread = threading.Thread(target=myloop, args=(app_state,))
+# thread.start()
 
 
 # from js_example import views  # noqa: E402, F401
