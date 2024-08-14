@@ -1,14 +1,14 @@
 """Routing functions"""
 
-import json
+# import json
 import logging
 import time
 from flask import jsonify
 from flask import render_template
 from flask import request
 
-from mqtt_util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
-from . import app, app_state, mqtt, mqtt_topics
+# from mqtt_util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
+from . import app, app_state
 
 
 _LOG = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ def control():
         app_state.control = False
         changed = True
     if changed:
-        _LOG.debug("Publishing control: %s", app_state.control)
-        mqtt.publish(mqtt_topics[ID_CONTROL], "1" if app_state.control else "0")
+        _LOG.info("Setting control: %s", app_state.control)
+        # mqtt.publish(mqtt_topics[ID_CONTROL], "1" if app_state.control else "0")
 
     target_ec = request.form["target-ec"]
     try:
@@ -60,15 +60,18 @@ def control():
 
     parameters = {}
     if target_ec != app_state.target_ec:
+        app_state.target_ec = target_ec
         parameters["target_ec"] = target_ec
     if dose_duration != app_state.dose_duration:
+        app_state.dose_duration = dose_duration
         parameters["dose_duration"] = dose_duration
     if equilibration_time != app_state.equilibration_time:
+        app_state.equilibration_time = equilibration_time
         parameters["equilibration_time"] = equilibration_time
 
-    _LOG.debug("control setting parameters: %s", parameters)
-    mqtt.publish(mqtt_topics[ID_PARAMETERS], json.dumps(parameters))
-
+    _LOG.info("/control setting parameters: %s", parameters)
+    # mqtt.publish(mqtt_topics[ID_PARAMETERS], json.dumps(parameters))
+    # Return parameters to update the UI in case any could not be set as requested
     return jsonify(parameters=parameters)
 
 
@@ -81,8 +84,10 @@ def dose():
         _LOG.debug("Error getting dose duration: %s", duration)
         data = {"status": "failure"}
         return data, 422
-    _LOG.debug("Publishing manual dose: %s", duration)
-    mqtt.publish(mqtt_topics[ID_MANUAL_DOSE], str(duration))
+    _LOG.info("Setting manual dose: %s", duration)
+    # mqtt.publish(mqtt_topics[ID_MANUAL_DOSE], str(duration))
+    app_state.manual_dose = True
+    app_state.manual_dose_duration = duration
     return {"status": "success"}, 200
 
 
@@ -95,8 +100,9 @@ def calibrate_ec():
         _LOG.debug("Error getting calibrate-check: %s", check)
         data = {"status": "failure"}
         return data, 422
-    _LOG.debug("Publishing calibrate ecprobe")
-    mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
+    _LOG.info("Calibrate ecprobe")
+    # mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
+    app_state.should_calibrate_ec = True
     return {"status": "success"}, 200
 
 

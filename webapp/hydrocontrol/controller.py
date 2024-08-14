@@ -14,18 +14,9 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from mqtt_util import (
-    ID_CALIBRATE,
-    ID_CONTROL,
-    ID_EC,
-    ID_MANUAL_DOSE,
-    ID_PARAMETERS,
-    ID_STATE,
-    create_on_connect,
-    create_on_message,
-    setup_mqtt_topics,
-)
-from state_classes import AppConfig, AppState, process_config
+from webapp.hydrocontrol.state_classes import AppConfig, AppState, process_config
+
+ID_EC = "ec"
 
 
 class Pump:
@@ -73,31 +64,61 @@ class HydroController:
         self.current_state = current_state
         self.app_config = app_config
 
-        self.mqtt_topics = setup_mqtt_topics(app_config)
-        on_mqtt_message = create_on_message(current_state, self.mqtt_topics)
-        on_mqtt_connect = create_on_connect(
-            [ID_CONTROL, ID_CALIBRATE, ID_EC, ID_MANUAL_DOSE, ID_PARAMETERS],
-            self.mqtt_topics,
-        )
-        self.mqtt_client = self.setup_mqtt(on_mqtt_message, on_mqtt_connect, app_config)
+        self.mqtt_client = self.setup_mqtt()
         self.ec_pump = Pump(app_config.motor_pin)
 
         self.loop_delay = 3
 
-    @staticmethod
-    def setup_mqtt(on_message: Callable, on_connect: Callable, app_config: AppConfig):
+    def setup_mqtt(self):
         """Setup the MQTT client and subscribe to topics."""
         # client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         client = mqtt.Client()
-        host = app_config.host
-        port = app_config.port
-        username = app_config.username
-        password = app_config.password
+        host = self.app_config.host
+        port = self.app_config.port
+        username = self.app_config.username
+        password = self.app_config.password
         client.username_pw_set(username, password)
         client.connect(host, port=port)
-        client.on_message = on_message
-        client.on_connect = on_connect
+
+        self.mqtt_topics = {ID_EC: self.app_config.ec_prefix}
+        client.on_connect = self.create_on_connect()
+        client.on_message = self.create_on_message()
+
         return client
+
+    def create_on_connect(self) -> Callable:
+        """Create a callback to handle connection to MQTT broker."""
+
+        def on_mqtt_connect(client, _userdata, _flags, _reason_code):
+            # def on_connect(client, _userdata, _flags, _reason_code, _properties):
+            """Subscribe to topics on connect."""
+            retcodes = []
+            subscribed = []
+            for topic in self.mqtt_topics.values():
+                retcodes.append(client.subscribe(topic))
+                subscribed.append(topic)
+            if all([retcode[0] == 0 for retcode in retcodes]):
+                _LOG.debug("Subscribed to topics: %s", subscribed)
+            else:
+                _LOG.warning("Error subscribing to topics: %s", retcodes)
+
+        return on_mqtt_connect
+
+    def create_on_message(self) -> Callable:
+        """Create a callback to handle incoming MQTT messages."""
+
+        def on_mqtt_message(_client, _userdata, message):
+            topic = message.topic
+            payload = message.payload.decode("utf-8")
+            _LOG.debug("Received message: %s %s", topic, payload)
+            if topic == self.mqtt_topics[ID_EC]:
+                try:
+                    self.current_state.current_ec = float(payload)
+                except ValueError as e:
+                    _LOG.warning("Error getting EC: %s - %s", payload, e)
+                    self.current_state.current_ec = -1.0
+
+        return on_mqtt_message
 
     def control_ec(self):
         """Control the EC level"""
@@ -110,11 +131,11 @@ class HydroController:
                 self.current_state.last_dose_time = time.time()
                 self.current_state.dose_count += 1
                 self.current_state.total_dose_time += self.current_state.dose_duration
-                status_json = self.current_state.status_json()
-                _LOG.debug("Publishing state: %s", status_json)
-                self.mqtt_client.publish(
-                    self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
-                )
+                # status_json = self.current_state.status_json()
+                # _LOG.debug("Publishing state: %s", status_json)
+                # self.mqtt_client.publish(
+                #     self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
+                # )
         return
 
     def calibrate_ec(self):
@@ -130,11 +151,11 @@ class HydroController:
         self.current_state.last_dose_time = time.time()
         self.current_state.dose_count += 1
         self.current_state.total_dose_time += self.current_state.manual_dose_duration
-        status_json = self.current_state.status_json()
-        _LOG.debug("Publishing state following manual dose: %s", status_json)
-        self.mqtt_client.publish(
-            self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
-        )
+        # status_json = self.current_state.status_json()
+        # _LOG.debug("Publishing state following manual dose: %s", status_json)
+        # self.mqtt_client.publish(
+        #     self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
+        # )
         self.current_state.manual_dose = False
         return
 
