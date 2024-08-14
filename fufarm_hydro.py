@@ -14,20 +14,18 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from util import (
+from mqtt_util import (
     ID_CALIBRATE,
     ID_CONTROL,
     ID_EC,
     ID_MANUAL_DOSE,
     ID_PARAMETERS,
     ID_STATE,
-    AppState,
-    AppConfig,
     create_on_connect,
     create_on_message,
     setup_mqtt_topics,
-    process_config,
 )
+from state_classes import AppConfig, AppState, process_config
 
 
 class Pump:

@@ -7,7 +7,7 @@ from flask import jsonify
 from flask import render_template
 from flask import request
 
-from util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
+from mqtt_util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
 from . import app, app_state, mqtt, mqtt_topics
 
 

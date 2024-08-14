@@ -11,18 +11,18 @@ import time
 from flask import Flask
 from flask_mqtt import Mqtt
 
+from state_classes import process_config
+
 
 # Hack import for time being
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 PARENT_DIR = os.path.dirname(currentdir)
 sys.path.insert(0, PARENT_DIR)
 # pylint: disable=wrong-import-position
-from util import (
+from mqtt_util import (
     ID_STATE,
-    AppState,
     create_on_connect,
     create_on_message,
-    process_config,
     setup_mqtt_topics,
 )
 
