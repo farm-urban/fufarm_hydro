@@ -1,17 +1,14 @@
 app:
-  # host: "localhost"
-  host: "homeassistant.local"
+  host: "localhost"
+  #host: "homeassistant.local"
   port: 1883
   username: "hamqtt"
   password: "UbT4Rn3oY7!S9L"
-  topic_prefix: "hydro"
-  ec_prefix: "sensors/sensor/ec1"
+  ec_prefix: "sensors/sensor/ec"
   motor_pin: 0
   log_level: "DEBUG"
 state:
   control: False
   equilibration_time: 3
-  current_ec: 10.0
   target_ec: 1.8
-  last_dose_time: 0
   dose_duration: 5
