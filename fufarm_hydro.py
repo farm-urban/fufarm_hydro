@@ -1,24 +1,4 @@
-"""Farm Urban Hydroponic System
-
-Example configuration fufarm_hydro.yml file:
-app:
-  host: "localhost"
-  port: 1883
-  username: "hamqtt"
-  password: "UbT4Rn3oY7!S9L"
-  topic_prefix: "hydro"
-  ec_prefix: "sensors/sensor/ec1"
-  motor_pin: 0
-  log_level: "DEBUG"
-state:
-  control: False
-  should_calibrate: False
-  equilibration_time: 3
-  current_ec: 10.0
-  target_ec: 1.8
-  last_dose_time: 0
-  dose_duration: 5
-~                   
+"""Farm Urban Hydroponic System~                   
 
 Notes:
 https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi
@@ -34,20 +14,18 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from util import (
+from mqtt_util import (
     ID_CALIBRATE,
     ID_CONTROL,
     ID_EC,
     ID_MANUAL_DOSE,
     ID_PARAMETERS,
     ID_STATE,
-    AppState,
-    AppConfig,
     create_on_connect,
     create_on_message,
     setup_mqtt_topics,
-    process_config,
 )
+from state_classes import AppConfig, AppState, process_config
 
 
 class Pump:
@@ -87,101 +65,113 @@ class Pump:
         return
 
 
-def setup_mqtt(on_message: Callable, on_connect: Callable, app_config: AppConfig):
-    """Setup the MQTT client and subscribe to topics."""
-    # client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client = mqtt.Client()
-    # host = "homeassistant.local"
-    host = app_config.host
-    port = app_config.port
-    username = app_config.username
-    password = app_config.password
-    client.username_pw_set(username, password)
-    client.connect(host, port=port)
-    client.on_message = on_message
-    client.on_connect = on_connect
-    return client
+class HydroController:
+    """Hydroponic controller"""
 
+    def __init__(self, app_config: AppConfig, current_state: AppState):
 
-def control_ec(
-    state: AppState, pump: Pump, client: mqtt.Client, topics: dict[str, str]
-):
-    """Control the EC level"""
-    if state.current_ec < state.target_ec:
-        if time.time() - state.last_dose_time > state.equilibration_time:
-            pump.run(state.dose_duration)
-            state.last_dose_time = time.time()
-            state.dose_count += 1
-            state.total_dose_time += state.dose_duration
-            status_json = state.status_json()
-            _LOG.debug("Publishing state: %s", status_json)
-            client.publish(topics[ID_STATE], status_json, qos=1, retain=True)
-    return
+        self.current_state = current_state
+        self.app_config = app_config
 
+        self.mqtt_topics = setup_mqtt_topics(app_config)
+        on_mqtt_message = create_on_message(current_state, self.mqtt_topics)
+        on_mqtt_connect = create_on_connect(
+            [ID_CONTROL, ID_CALIBRATE, ID_EC, ID_MANUAL_DOSE, ID_PARAMETERS],
+            self.mqtt_topics,
+        )
+        self.mqtt_client = self.setup_mqtt(on_mqtt_message, on_mqtt_connect, app_config)
+        self.ec_pump = Pump(app_config.motor_pin)
 
-def calibrate_ec(state: AppState):
-    """Calibrate the EC sensor"""
-    _LOG.info("Calibrating EC sensor")
-    time.sleep(5)
-    current_state.should_calibrate_ec = False
-    return
+        self.loop_delay = 3
 
+    @staticmethod
+    def setup_mqtt(on_message: Callable, on_connect: Callable, app_config: AppConfig):
+        """Setup the MQTT client and subscribe to topics."""
+        # client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        client = mqtt.Client()
+        host = app_config.host
+        port = app_config.port
+        username = app_config.username
+        password = app_config.password
+        client.username_pw_set(username, password)
+        client.connect(host, port=port)
+        client.on_message = on_message
+        client.on_connect = on_connect
+        return client
 
-def manual_dose(
-    state: AppState, pump: Pump, client: mqtt.Client, topics: dict[str, str]
-):
-    """Dose for a given duration"""
-    pump.run(state.manual_dose_duration)
-    state.last_dose_time = time.time()
-    state.dose_count += 1
-    state.total_dose_time += state.manual_dose_duration
-    status_json = state.status_json()
-    _LOG.debug("Publishing state following manual dose: %s", status_json)
-    client.publish(topics[ID_STATE], status_json, qos=1, retain=True)
-    current_state.manual_dose = False
-    return
+    def control_ec(self):
+        """Control the EC level"""
+        if self.current_state.current_ec < self.current_state.target_ec:
+            if (
+                time.time() - self.current_state.last_dose_time
+                > self.current_state.equilibration_time
+            ):
+                self.ec_pump.run(self.current_state.dose_duration)
+                self.current_state.last_dose_time = time.time()
+                self.current_state.dose_count += 1
+                self.current_state.total_dose_time += self.current_state.dose_duration
+                status_json = self.current_state.status_json()
+                _LOG.debug("Publishing state: %s", status_json)
+                self.mqtt_client.publish(
+                    self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
+                )
+        return
+
+    def calibrate_ec(self):
+        """Calibrate the EC sensor"""
+        _LOG.info("Calibrating EC sensor")
+        time.sleep(5)
+        self.current_state.should_calibrate_ec = False
+        return
+
+    def manual_dose(self):
+        """Dose for a given duration"""
+        self.ec_pump.run(self.current_state.manual_dose_duration)
+        self.current_state.last_dose_time = time.time()
+        self.current_state.dose_count += 1
+        self.current_state.total_dose_time += self.current_state.manual_dose_duration
+        status_json = self.current_state.status_json()
+        _LOG.debug("Publishing state following manual dose: %s", status_json)
+        self.mqtt_client.publish(
+            self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
+        )
+        self.current_state.manual_dose = False
+        return
+
+    def run(self):
+        """Run the hydro controller"""
+        self.mqtt_client.loop_start()
+        while True:
+            while not self.mqtt_client.is_connected():
+                _LOG.warning("mqtt_client not connected")
+                self.mqtt_client.reconnect()
+                time.sleep(2)
+            # _LOG.debug("%s", self.current_state)
+
+            if self.current_state.should_calibrate_ec:
+                self.calibrate_ec()
+
+            if self.current_state.manual_dose:
+                self.manual_dose()
+
+            if self.current_state.control:
+                self.control_ec()
+
+            time.sleep(self.loop_delay)
 
 
 CONFIG_FILE = "fufarm_hydro.yml"
-current_state = AppState()
-app_config = AppConfig()
+APP_CONFIG = AppConfig()
+CURRENT_STATE = AppState()
 if os.path.isfile(CONFIG_FILE):
-    app_config, current_state = process_config(CONFIG_FILE)
-
-mqtt_topics = setup_mqtt_topics(app_config)
-
-LOOP_DELAY = 3
+    APP_CONFIG, CURRENT_STATE = process_config(CONFIG_FILE)
 
 logging.basicConfig(
-    level=app_config.log_level,
+    level=APP_CONFIG.log_level,
     format="%(asctime)s rpi: %(message)s",
 )
 _LOG = logging.getLogger()
 
-
-on_mqtt_message = create_on_message(current_state, mqtt_topics)
-on_mqtt_connect = create_on_connect(
-    [ID_CONTROL, ID_CALIBRATE, ID_EC, ID_MANUAL_DOSE, ID_PARAMETERS], mqtt_topics
-)
-mqtt_client = setup_mqtt(on_mqtt_message, on_mqtt_connect, app_config)
-ec_pump = Pump(app_config.motor_pin)
-mqtt_client.loop_start()
-
-last_dose_time = time.time()
-while True:
-    while not mqtt_client.is_connected():
-        _LOG.warning("mqtt_client not connected")
-        mqtt_client.reconnect()
-        time.sleep(2)
-    _LOG.debug("%s", current_state)
-
-    if current_state.should_calibrate_ec:
-        calibrate_ec(current_state)
-
-    if current_state.manual_dose:
-        manual_dose(current_state, ec_pump, mqtt_client, mqtt_topics)
-
-    if current_state.control:
-        control_ec(current_state, ec_pump, mqtt_client, mqtt_topics)
-
-    time.sleep(LOOP_DELAY)
+if __name__ == "__main__":
+    controller = HydroController(APP_CONFIG, CURRENT_STATE)
+    controller.run()
