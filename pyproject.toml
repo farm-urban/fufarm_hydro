@@ -1,0 +1,13 @@
+[project]
+name = "fufarm_hydro"
+version = "0.0.1"
+description = "A simple hydroponics control system"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+maintainers = [{name = "Jens Thomas", email = "jens@farmurban.co.uk"}]
+dependencies = [
+    "flask",
+]
+
+[project.urls]
+Repository = "https://github.com/farm-urban/fufarm_hydro"

@@ -8,8 +8,10 @@ from flask import render_template
 from flask import request
 
 # from mqtt_util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
-from . import app, app_state
+# from . import app, app_state
+from . import app
 
+APP_STATE = app.config["APP_STATE"]
 
 _LOG = logging.getLogger(__name__)
 
@@ -22,21 +24,21 @@ def format_time_filter(s):
 
 @app.route("/")
 def index():
-    return render_template("index.html", app_state=app_state)
+    return render_template("index.html", app_state=APP_STATE)
 
 
 @app.route("/control", methods=["POST"])
 def control():
     mode = request.form["mode"]
     changed = False
-    if mode == "control" and not app_state.control:
-        app_state.control = True
+    if mode == "control" and not APP_STATE.control:
+        APP_STATE.control = True
         changed = True
-    elif mode == "monitor" and app_state.control:
-        app_state.control = False
+    elif mode == "monitor" and APP_STATE.control:
+        APP_STATE.control = False
         changed = True
     if changed:
-        _LOG.info("Setting control: %s", app_state.control)
+        _LOG.info("Setting control: %s", APP_STATE.control)
         # mqtt.publish(mqtt_topics[ID_CONTROL], "1" if app_state.control else "0")
 
     target_ec = request.form["target-ec"]
@@ -59,14 +61,14 @@ def control():
         return {"status": "failure"}, 422
 
     parameters = {}
-    if target_ec != app_state.target_ec:
-        app_state.target_ec = target_ec
+    if target_ec != APP_STATE.target_ec:
+        APP_STATE.target_ec = target_ec
         parameters["target_ec"] = target_ec
-    if dose_duration != app_state.dose_duration:
-        app_state.dose_duration = dose_duration
+    if dose_duration != APP_STATE.dose_duration:
+        APP_STATE.dose_duration = dose_duration
         parameters["dose_duration"] = dose_duration
-    if equilibration_time != app_state.equilibration_time:
-        app_state.equilibration_time = equilibration_time
+    if equilibration_time != APP_STATE.equilibration_time:
+        APP_STATE.equilibration_time = equilibration_time
         parameters["equilibration_time"] = equilibration_time
 
     _LOG.info("/control setting parameters: %s", parameters)
@@ -86,8 +88,8 @@ def dose():
         return data, 422
     _LOG.info("Setting manual dose: %s", duration)
     # mqtt.publish(mqtt_topics[ID_MANUAL_DOSE], str(duration))
-    app_state.manual_dose = True
-    app_state.manual_dose_duration = duration
+    APP_STATE.manual_dose = True
+    APP_STATE.manual_dose_duration = duration
     return {"status": "success"}, 200
 
 
@@ -102,10 +104,10 @@ def calibrate_ec():
         return data, 422
     _LOG.info("Calibrate ecprobe")
     # mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
-    app_state.should_calibrate_ec = True
+    APP_STATE.should_calibrate_ec = True
     return {"status": "success"}, 200
 
 
 @app.route("/status")
 def status():
-    return jsonify(state=app_state.status_dict())
+    return jsonify(state=APP_STATE.status_dict())

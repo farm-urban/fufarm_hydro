@@ -28,11 +28,12 @@ def process_config(
 class AppConfig:
     """Configures the Application."""
 
+    flask_host: str = "0.0.0.0"
     # host = "homeassistant.local"
-    host: str = "localhost"
-    port: int = 1883
-    username: str = "hamqtt"
-    password: str = "UbT4Rn3oY7!S9L"
+    mqtt_host: str = "localhost"
+    mqtt_port: int = 1883
+    mqtt_username: str = "hamqtt"
+    mqtt_password: str = "UbT4Rn3oY7!S9L"
     topic_prefix: str = "hydro"
     ec_prefix: str = "sensors/sensor/ec1"
     motor_pin: int = 0

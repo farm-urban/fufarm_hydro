@@ -4,7 +4,7 @@ import logging
 import json
 from typing import Callable, List
 
-from webapp.hydrocontrol.state_classes import AppConfig, AppState
+from homehydro.hydrocontrol.state_classes import AppConfig, AppState
 
 
 _LOG = logging.getLogger(__name__)

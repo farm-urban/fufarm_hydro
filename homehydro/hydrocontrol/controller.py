@@ -14,7 +14,7 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from webapp.hydrocontrol.state_classes import AppConfig, AppState, process_config
+from homehydro.hydrocontrol.state_classes import AppConfig, AppState, process_config
 
 ID_EC = "ec"
 
@@ -73,13 +73,16 @@ class HydroController:
         """Setup the MQTT client and subscribe to topics."""
         # client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         client = mqtt.Client()
-        host = self.app_config.host
-        port = self.app_config.port
-        username = self.app_config.username
-        password = self.app_config.password
+        host = self.app_config.mqtt_host
+        port = self.app_config.mqtt_port
+        username = self.app_config.mqtt_username
+        password = self.app_config.mqtt_password
         client.username_pw_set(username, password)
-        client.connect(host, port=port)
-
+        try:
+            client.connect(host, port=port)
+        except ConnectionRefusedError as e:
+            _LOG.error("Could not connect to MQTT broker: %s", e)
+            raise e
         self.mqtt_topics = {ID_EC: self.app_config.ec_prefix}
         client.on_connect = self.create_on_connect()
         client.on_message = self.create_on_message()
