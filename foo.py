@@ -1,12 +1,12 @@
 """FOO"""
 
 import yaml
+import time
+import statistics
 
 import mqtt_io.modules.sensor.dfr0300 as dfr0300
 from mqtt_io.server import _init_module
 from mqtt_io.__main__ import load_config
-
-print(dir(_init_module))
 
 config_file = "mqtt-io.yml"
 
@@ -40,13 +40,33 @@ del sensor_config[dfr0300.TEMPSENSOR_ID]
 
 module.setup_sensor(sensor_config, None)
 calibrator = dfr0300.Calibrator()
-value = module.get_value(sensor_config)
+temperature = 25.0
 
-ntries = 20:  # Number of calibration attempts
+
+def get_ec():
+    voltage = module.board.get_adc_value(module.channel)
+    ec = module.ec_from_voltage(voltage, temperature)
+    #value = module.get_value(sensor_config)
+    return ec
+
+ntries = 20  # Number of calibration attempts
 values = []
 for i in range(ntries):
-    if calibrator.calibrate(value):
-        break
-    time.sleep(2)
+    ec = get_ec()
+    values.append(ec)
+    print(ec)
+    #if calibrator.calibrate(value):
+    #    break
+    time.sleep(1)
+
+variance = statistics.variance(values)
+print(variance)
+if variance > 0.05:
+   print("Cannot calibrate - variance of readings is > 0.05")
+
+voltage = statistics.fmean(values)
+print("Voltage: ",voltage)
+
+
 
 # self.current_state.should_calibrate_ec = False

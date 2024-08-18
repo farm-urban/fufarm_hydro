@@ -10,6 +10,7 @@ mqtt:
 sensor_modules:
   - name: aht20_temp
     module: aht20
+
   - name: dfr0300
     module: dfr0300
 

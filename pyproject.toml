@@ -8,6 +8,12 @@ maintainers = [{name = "Jens Thomas", email = "jens@farmurban.co.uk"}]
 dependencies = [
     "flask",
     "paho-mqtt",
+    "aiomqtt",
+    "confp",
+    "backoff",
+    "smbus",
+    "cerberus",
+    "typing_extensions",
     "pyyaml"
 ]
 
