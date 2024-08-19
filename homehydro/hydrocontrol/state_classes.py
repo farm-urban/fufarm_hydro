@@ -52,6 +52,7 @@ class AppState:
     control: bool = False
     should_calibrate_ec: bool = False
     calibration_temperature: float = 25.0
+    calibration_status: str = "Not calibrated"
     manual_dose: bool = False
     manual_dose_duration: int = 0
     equilibration_time: int = 3
@@ -67,6 +68,8 @@ class AppState:
         """Return the status variables as a dictionary."""
         return dict(
             {
+                "calibration_temperature": self.calibration_temperature,
+                "calibration_status": self.calibration_status,
                 "current_ec": self.current_ec,
                 "dose_count": self.dose_count,
                 # "last_dose_time": time.strftime(

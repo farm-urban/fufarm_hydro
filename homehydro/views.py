@@ -99,7 +99,9 @@ def calibrate_ec():
     try:
         temperature = float(temperature)
     except ValueError:
-        _LOG.debug("Error getting calibrate-ecprobe-temperature: %s", temperature)
+        msg = f"Invalid temperature for calibration: '{temperature}'"
+        _LOG.info(msg)
+        APP_STATE.calibration_status = msg
         data = {"status": "failure"}
         return data, 422
     _LOG.info("Calibrate ecprobe: %s", temperature)

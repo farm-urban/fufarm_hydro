@@ -65,24 +65,22 @@ def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
     return voltage, temperature
 
 
-def calibrate(config_file, temperature=25.0):
-    module_config, sensor_config = parse_config(config_file)
-    dfr0300_module = _init_module(module_config, "sensor", False)
-    dfr0300_module.setup_sensor(sensor_config, None)
+def calibrate(config_file, temperature=25.0) -> tuple[bool, str]:
     try:
+        module_config, sensor_config = parse_config(config_file)
+        dfr0300_module = _init_module(module_config, "sensor", False)
+        dfr0300_module.setup_sensor(sensor_config, None)
         voltage, temperature = calc_calibration_voltage_and_temperature(
             dfr0300_module, temperature
         )
+        calibrator = dfr0300.Calibrator()
+        _LOG.info(
+            "Calibrating sensor with voltage: %f, temperature: %f", voltage, temperature
+        )
+        # Should check return code
+        calibrator.calibrate(voltage, temperature)
     except RuntimeError as e:
-        _LOG.error("Error calibrating sensor: %s", e)
-        return False
-    calibrator = dfr0300.Calibrator()
-    _LOG.info(
-        "Calibrating sensor with voltage: %f, temperature: %f", voltage, temperature
-    )
-    # Should check return code
-    calibrator.calibrate(voltage, temperature)
-    return True
-
-
-# self.current_state.should_calibrate_ec = False
+        error_msg = f"Error calibrating sensor: {e}"
+        _LOG.error(error_msg)
+        return (False, error_msg)
+    return (True, f"Calibrated at: {time.asctime(time.localtime())}")

@@ -93,16 +93,22 @@
   />
 </form>
 <form id="calibrate-ecprobe">
-    <div class="row">
-      <label>Calibrate EC Probe:</label>
-      <input
-        type="submit"
-        value="Calibrate"
-      />
-      <label>Calibration temperature:</label>
-      <input name="calibrate-ecprobe-temperature" type="number" step="0.1"/>
-      <label>Status:</label>
-      <output id="calibrate-ecprobe-output">FOO</output>  
+    <div class="calibration">
+      <div class="row">
+        <label>Calibrate EC Probe:</label>
+        <input
+          type="submit"
+          value="Calibrate"
+        />
+      </div>
+      <div class="row">
+        <label>Calibration temperature:</label>
+        <input id="calibrate-ecprobe-temperature"  name="calibrate-ecprobe-temperature" type="number" step="0.1" value="25.0"/>
+      </div>
+      <div class="row">
+        <label>Status:</label>
+        <output id="calibrate-ecprobe-status">Waiting on status...</output>  
+      </div>
     </div>
   </form>
 </form>
@@ -125,7 +131,12 @@
     dose_count.innerText = data.state.dose_count;
     const total_dose_time = document.getElementById('total-dose-time');
     total_dose_time.innerText = data.state.total_dose_time
+    const calibration_temperature = document.getElementById('calibrate-ecprobe-temperature');
+    calibration_temperature.innerText = data.state.calibration_temperature
+    const calibration_status = document.getElementById('calibrate-ecprobe-status');
+    calibration_status.innerText = data.state.calibration_status
   }
+
 
   function addParamsSubmit(ev) {
     ev.preventDefault();

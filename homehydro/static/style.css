@@ -2,6 +2,12 @@
   display: flex;
   flex-direction: row;
 }
+
+.calibration {
+  display: flex;
+  flex-direction: column;
+  margin-left: 2em;
+}
 form {
   display: flex;
 }
