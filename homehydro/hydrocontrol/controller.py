@@ -8,6 +8,7 @@ Could look at aiomqtt for async MQTT client
 
 import logging
 import os
+import socket
 import time
 
 from typing import Callable
@@ -15,7 +16,7 @@ from typing import Callable
 import paho.mqtt.client as mqtt
 
 from homehydro.hydrocontrol.state_classes import AppConfig, AppState, process_config
-from ec_ calibrator import calibrate
+from homehydro.hydrocontrol.ec_calibrator import calibrate
 
 ID_EC = "ec"
 
@@ -82,7 +83,7 @@ class HydroController:
         client.username_pw_set(username, password)
         try:
             client.connect(host, port=port)
-        except ConnectionRefusedError as e:
+        except (ConnectionRefusedError, socket.gaierror) as e:
             _LOG.error("Could not connect to MQTT broker: %s", e)
             raise e
         self.mqtt_topics = {ID_EC: self.app_config.ec_prefix}
