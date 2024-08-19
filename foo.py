@@ -56,6 +56,7 @@ for _ in range(NUM_SAMPLES):
     voltages.append(voltage)
     temperatures.append(temperature)
     print(voltage)
+    module.get_value(sensor_config)
     time.sleep(SAMPLE_INTERVAL)
 
 variance = statistics.variance(voltages)
@@ -66,7 +67,7 @@ if variance > 0.05:
 voltage = statistics.fmean(voltages)
 temperature = statistics.fmean(temperatures)
 print("Calibrating sensor with voltage, temperature: ", voltage, temperature)
-calibrator.calibrate(voltage, temperature)
+#calibrator.calibrate(voltage, temperature)
 
 
 # self.current_state.should_calibrate_ec = False

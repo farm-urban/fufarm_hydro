@@ -18,13 +18,13 @@ sensor_inputs:
   - name: temperature
     module: aht20_temp 
     type: temperature
-    interval: 10
+    interval: 5
     digits: 4
 
   - name: ec
     module: dfr0300
     pin: 0
     tempsensor: temperature
-    interval: 10
+    interval: 5
     digits: 4
 
