@@ -15,6 +15,7 @@ from typing import Callable
 import paho.mqtt.client as mqtt
 
 from homehydro.hydrocontrol.state_classes import AppConfig, AppState, process_config
+from ec_ calibrator import calibrate
 
 ID_EC = "ec"
 
@@ -59,10 +60,11 @@ class Pump:
 class HydroController:
     """Hydroponic controller"""
 
-    def __init__(self, app_config: AppConfig, current_state: AppState):
+    def __init__(self, app_config: AppConfig, current_state: AppState, mqttio_config_file: str):
 
         self.current_state = current_state
         self.app_config = app_config
+        self.mqttio_config_file = mqttio_config_file
 
         self.mqtt_client = self.setup_mqtt()
         self.ec_pump = Pump(app_config.motor_pin)
@@ -141,9 +143,10 @@ class HydroController:
                 # )
         return
 
-    def calibrate_ec(self):
+    def calibrate_ec(self, temperature: float):
         """Calibrate the EC sensor"""
         _LOG.info("Calibrating EC sensor")
+        calibrate(self.mqttio_config_file, temperature)
         time.sleep(5)
         self.current_state.should_calibrate_ec = False
         return
@@ -185,6 +188,7 @@ class HydroController:
 
 
 CONFIG_FILE = "fufarm_hydro.yml"
+MQTTIO_CONFIG_FILE = "mqtt-io.yml"
 APP_CONFIG = AppConfig()
 CURRENT_STATE = AppState()
 if os.path.isfile(CONFIG_FILE):
@@ -197,5 +201,5 @@ logging.basicConfig(
 _LOG = logging.getLogger()
 
 if __name__ == "__main__":
-    controller = HydroController(APP_CONFIG, CURRENT_STATE)
+    controller = HydroController(APP_CONFIG, CURRENT_STATE, MQTTIO_CONFIG_FILE)
     controller.run()

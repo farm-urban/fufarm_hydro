@@ -43,18 +43,17 @@ def parse_config(config_file, module_name="dfr0300"):
     return module_config, sensor_config
 
 
-def calc_calibration_voltage_and_temperature(dfr0300_module):
-    temperature = 25.0
-    NUM_SAMPLES = 20
-    SAMPLE_INTERVAL = 1
+def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
+    num_samples = 20
+    sample_interval = 1
     voltages = []
     temperatures = []  # for when using a temp sensor
-    for _ in range(NUM_SAMPLES):
+    for _ in range(num_samples):
         voltage = dfr0300_module.board.get_adc_value(dfr0300_module.channel)
         _LOG.debug("Voltage: %s", voltage)
         voltages.append(voltage)
         temperatures.append(temperature)
-        time.sleep(SAMPLE_INTERVAL)
+        time.sleep(sample_interval)
 
     variance = statistics.variance(voltages)
     if variance > 0.05:
@@ -66,14 +65,24 @@ def calc_calibration_voltage_and_temperature(dfr0300_module):
     return voltage, temperature
 
 
-config_file = "mqtt-io.yml"
-module_config, sensor_config = parse_config(config_file)
-dfr0300_module = _init_module(module_config, "sensor", False)
-dfr0300_module.setup_sensor(sensor_config, None)
-voltage, temperature = calc_calibration_voltage_and_temperature(dfr0300_module)
-calibrator = dfr0300.Calibrator()
-_LOG.info("Calibrating sensor with voltage: %f, temperature: %f", voltage, temperature)
-calibrator.calibrate(voltage, temperature)
+def calibrate(config_file, temperature=25.0):
+    module_config, sensor_config = parse_config(config_file)
+    dfr0300_module = _init_module(module_config, "sensor", False)
+    dfr0300_module.setup_sensor(sensor_config, None)
+    try:
+        voltage, temperature = calc_calibration_voltage_and_temperature(
+            dfr0300_module, temperature
+        )
+    except RuntimeError as e:
+        _LOG.error("Error calibrating sensor: %s", e)
+        return False
+    calibrator = dfr0300.Calibrator()
+    _LOG.info(
+        "Calibrating sensor with voltage: %f, temperature: %f", voltage, temperature
+    )
+    # Should check return code
+    calibrator.calibrate(voltage, temperature)
+    return True
 
 
 # self.current_state.should_calibrate_ec = False
