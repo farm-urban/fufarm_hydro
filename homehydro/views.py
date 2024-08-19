@@ -95,16 +95,17 @@ def dose():
 
 @app.route("/calibrate_ec", methods=["POST"])
 def calibrate_ec():
-    check = request.form["calibrate-ecprobe-check"]
+    temperature = request.form["calibrate-ecprobe-temperature"]
     try:
-        check = int(check)
+        temperature = float(temperature)
     except ValueError:
-        _LOG.debug("Error getting calibrate-check: %s", check)
+        _LOG.debug("Error getting calibrate-ecprobe-temperature: %s", temperature)
         data = {"status": "failure"}
         return data, 422
-    _LOG.info("Calibrate ecprobe")
+    _LOG.info("Calibrate ecprobe: %s", temperature)
     # mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
     APP_STATE.should_calibrate_ec = True
+    APP_STATE.calibrate_temperature = temperature
     return {"status": "success"}, 200
 
 

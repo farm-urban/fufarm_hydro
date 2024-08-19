@@ -61,7 +61,9 @@ class Pump:
 class HydroController:
     """Hydroponic controller"""
 
-    def __init__(self, app_config: AppConfig, current_state: AppState, mqttio_config_file: str):
+    def __init__(
+        self, app_config: AppConfig, current_state: AppState, mqttio_config_file: str
+    ):
 
         self.current_state = current_state
         self.app_config = app_config
@@ -144,12 +146,17 @@ class HydroController:
                 # )
         return
 
-    def calibrate_ec(self, temperature: float):
+    def calibrate_ec(self):
         """Calibrate the EC sensor"""
         _LOG.info("Calibrating EC sensor")
-        calibrate(self.mqttio_config_file, temperature)
-        time.sleep(5)
-        self.current_state.should_calibrate_ec = False
+        try:
+            calibrate(
+                self.mqttio_config_file, self.current_state.calibration_temperature
+            )
+        except Exception as e:
+            _LOG.error("Error calibrating EC: %s", e)
+        finally:
+            self.current_state.should_calibrate_ec = False
         return
 
     def manual_dose(self):

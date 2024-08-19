@@ -51,6 +51,7 @@ class AppState:
     # Control variables
     control: bool = False
     should_calibrate_ec: bool = False
+    calibration_temperature: float = 25.0
     manual_dose: bool = False
     manual_dose_duration: int = 0
     equilibration_time: int = 3
