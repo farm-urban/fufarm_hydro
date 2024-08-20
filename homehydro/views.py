@@ -7,6 +7,8 @@ from flask import jsonify
 from flask import render_template
 from flask import request
 
+from homehydro.hydrocontrol.state_classes import CalibrationStatus
+
 # from mqtt_util import ID_CALIBRATE, ID_CONTROL, ID_MANUAL_DOSE, ID_PARAMETERS
 # from . import app, app_state
 from . import app
@@ -101,12 +103,13 @@ def calibrate_ec():
     except ValueError:
         msg = f"Invalid temperature for calibration: '{temperature}'"
         _LOG.info(msg)
-        APP_STATE.calibration_status = msg
+        APP_STATE.calibration_status = CalibrationStatus.ERROR
+        APP_STATE.calibration_message = msg
         data = {"status": "failure"}
         return data, 422
     _LOG.info("Calibrate ecprobe: %s", temperature)
     # mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
-    APP_STATE.should_calibrate_ec = True
+    APP_STATE.calibration_status = CalibrationStatus.CALIBRATING
     APP_STATE.calibrate_temperature = temperature
     return {"status": "success"}, 200
 

@@ -15,7 +15,12 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from homehydro.hydrocontrol.state_classes import AppConfig, AppState, process_config
+from homehydro.hydrocontrol.state_classes import (
+    AppConfig,
+    AppState,
+    CalibrationStatus,
+    process_config,
+)
 from homehydro.hydrocontrol.ec_calibrator import calibrate
 
 ID_EC = "ec"
@@ -153,11 +158,13 @@ class HydroController:
             _status, message = calibrate(
                 self.mqttio_config_file, self.current_state.calibration_temperature
             )
+            self.current_state.calibration_status = CalibrationStatus.CALIBRATED
+            self.current_state.calibration_message = message
         except Exception as e:
             message = f"Error calibrating EC sensor: {e}"
             _LOG.error(message)
-        self.current_state.should_calibrate_ec = False
-        self.current_state.calibration_status = message
+            self.current_state.calibration_status = CalibrationStatus.ERROR
+        self.current_state.calibration_message = message
         return
 
     def manual_dose(self):
@@ -184,7 +191,7 @@ class HydroController:
                 time.sleep(2)
             # _LOG.debug("%s", self.current_state)
 
-            if self.current_state.should_calibrate_ec:
+            if self.current_state.calibration_status == CalibrationStatus.CALIBRATING:
                 self.calibrate_ec()
 
             if self.current_state.manual_dose:

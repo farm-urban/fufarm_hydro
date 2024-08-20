@@ -1,5 +1,6 @@
 """Functions shared between command-line and flask app"""
 
+from enum import IntEnum
 import logging
 import json
 import time
@@ -44,15 +45,24 @@ class AppConfig:
         return f"<\n{x}\n>"
 
 
+class CalibrationStatus(IntEnum):
+    """Enum for calibration status."""
+
+    NOT_CALIBRATED = 0
+    CALIBRATING = 1
+    CALIBRATED = 2
+    ERROR = 3
+
+
 @dataclass
 class AppState:
     """Tracks the current state of the autodoser."""
 
     # Control variables
     control: bool = False
-    should_calibrate_ec: bool = False
     calibration_temperature: float = 25.0
-    calibration_status: str = "Not calibrated"
+    calibration_status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
+    calibration_message: str = "Not Calibrated"
     manual_dose: bool = False
     manual_dose_duration: int = 0
     equilibration_time: int = 3
