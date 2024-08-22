@@ -159,12 +159,12 @@ class HydroController:
                 self.mqttio_config_file, self.current_state.calibration_temperature
             )
             self.current_state.calibration_status = CalibrationStatus.CALIBRATED
-            self.current_state.calibration_message = message
+            self.current_state.calibration_status_message = message
         except Exception as e:
             message = f"Error calibrating EC sensor: {e}"
             _LOG.error(message)
             self.current_state.calibration_status = CalibrationStatus.ERROR
-        self.current_state.calibration_message = message
+        self.current_state.calibration_status_message = message
         return
 
     def manual_dose(self):

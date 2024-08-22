@@ -62,7 +62,7 @@ class AppState:
     control: bool = False
     calibration_temperature: float = 25.0
     calibration_status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
-    calibration_message: str = "Not Calibrated"
+    calibration_status_message: str = "Not Calibrated"
     manual_dose: bool = False
     manual_dose_duration: int = 0
     equilibration_time: int = 3

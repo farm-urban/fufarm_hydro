@@ -104,7 +104,7 @@ def calibrate_ec():
         msg = f"Invalid temperature for calibration: '{temperature}'"
         _LOG.info(msg)
         APP_STATE.calibration_status = CalibrationStatus.ERROR
-        APP_STATE.calibration_message = msg
+        APP_STATE.calibration_status_message = msg
         data = {"status": "failure"}
         return data, 422
     _LOG.info("Calibrate ecprobe: %s", temperature)
