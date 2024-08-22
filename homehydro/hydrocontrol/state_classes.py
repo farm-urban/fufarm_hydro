@@ -37,7 +37,7 @@ class AppConfig:
     mqtt_password: str = "UbT4Rn3oY7!S9L"
     topic_prefix: str = "hydro"
     ec_prefix: str = "sensors/sensor/ec1"
-    motor_pin: int = 0
+    motor_channel: int = 0
     log_level: str = "INFO"
 
     def __repr__(self):

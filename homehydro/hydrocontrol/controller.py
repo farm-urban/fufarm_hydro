@@ -1,9 +1,5 @@
-"""Farm Urban Hydroponic System~                   
+"""Farm Urban Hydroponics Control System               
 
-Notes:
-https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi
-
-Could look at aiomqtt for async MQTT client
 """
 
 import logging
@@ -23,43 +19,46 @@ from homehydro.hydrocontrol.state_classes import (
 )
 from homehydro.hydrocontrol.ec_calibrator import calibrate
 
+
 ID_EC = "ec"
 
 
 class Pump:
     """Mock class for running pump"""
 
-    def __init__(self, pin):
+    def __init__(self, channel: int):
         # pylint: disable=import-outside-toplevel,import-error
         self.mock = False
         try:
-            import board
-            import pwmio
-            from adafruit_motor import servo
+            from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
+                DFRobotExpansionBoardIIC,
+                DFRobotExpansionBoardServo,
+            )
         except ImportError as e:
-            _LOG.error("Error importing modules: %s", e)
+            _LOG.error("Error importing pump driver modules: %s", e)
             self.mock = True
 
         if not self.mock:
-            pid = f"D{pin:d}"
-            if not hasattr(board, pid):
-                raise AttributeError(f"Could not find pin {pin} on board")
-            pwm = pwmio.PWMOut(getattr(board, pid), frequency=50)
-            self.my_servo = servo.ContinuousServo(pwm)
+            board = DFRobotExpansionBoardIIC(
+                1, 0x10
+            )  # Select i2c bus 1, set address to 0x10
+            self.servo = DFRobotExpansionBoardServo(board)
+            self.channel = channel
+            board.setup()
+            self.servo.begin()
 
     def run(self, dose_duration):
         """Dose for a given duration
-
-        1.0 is full speed forward
-        0.0 is stopped
-        -1.0 is full speed reverse
+        0 is full speed forward
+        90 is stopped
+        180 is full speed reverse
         """
         _LOG.info("Dosing for %d seconds", dose_duration)
         if not self.mock:
-            self.my_servo.throttle = 1.0
+            self.servo.move(self.channel, 0)
         time.sleep(dose_duration)
         if not self.mock:
-            self.my_servo.throttle = 0.0
+            self.servo.move(self.channel, 90)
         return
 
 
@@ -75,7 +74,7 @@ class HydroController:
         self.mqttio_config_file = mqttio_config_file
 
         self.mqtt_client = self.setup_mqtt()
-        self.ec_pump = Pump(app_config.motor_pin)
+        self.ec_pump = Pump(app_config.motor_channel)
 
         self.loop_delay = 3
 
