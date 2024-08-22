@@ -1,13 +1,12 @@
-"""FOO"""
+"""Calibrate the EC sensor"""
 
 import logging
-import yaml
 import time
 import statistics
+import yaml
 
 import mqtt_io.modules.sensor.dfr0300 as dfr0300
 from mqtt_io.server import _init_module
-from mqtt_io.__main__ import load_config
 
 _LOG = logging.getLogger(__name__)
 
@@ -50,11 +49,13 @@ def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
     temperatures = []  # for when using a temp sensor
     for _ in range(num_samples):
         voltage = dfr0300_module.board.get_adc_value(dfr0300_module.channel)
-        _LOG.debug("Voltage: %s", voltage)
         voltages.append(voltage)
         temperatures.append(temperature)
         time.sleep(sample_interval)
 
+    _LOG.debug(
+        "Calibration got voltages: %s\n temperatures: %s", voltages, temperatures
+    )
     variance = statistics.variance(voltages)
     if variance > 0.05:
         raise RuntimeError("Cannot calibrate - variance of voltages is > 0.05")
