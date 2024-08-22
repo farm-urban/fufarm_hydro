@@ -14,7 +14,10 @@ dependencies = [
     "smbus",
     "cerberus",
     "typing_extensions",
-    "pyyaml"
+    "pyyaml",
+    "rpi-lgpio",
+    "adafruit-blinka",
+    "adafruit-circuitpython-motor"
 ]
 
 [project.urls]
