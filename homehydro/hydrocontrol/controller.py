@@ -21,6 +21,7 @@ from homehydro.hydrocontrol.ec_calibrator import calibrate
 
 
 ID_EC = "ec"
+_LOG = logging.getLogger()
 
 
 class Pump:
@@ -202,19 +203,18 @@ class HydroController:
             time.sleep(self.loop_delay)
 
 
-CONFIG_FILE = "fufarm_hydro.yml"
-MQTTIO_CONFIG_FILE = "mqtt-io.yml"
-APP_CONFIG = AppConfig()
-CURRENT_STATE = AppState()
-if os.path.isfile(CONFIG_FILE):
-    APP_CONFIG, CURRENT_STATE = process_config(CONFIG_FILE)
-
-logging.basicConfig(
-    level=APP_CONFIG.log_level,
-    format="%(asctime)s rpi: %(message)s",
-)
-_LOG = logging.getLogger()
-
 if __name__ == "__main__":
+    CONFIG_FILE = "fufarm_hydro.yml"
+    MQTTIO_CONFIG_FILE = "mqtt-io.yml"
+    APP_CONFIG = AppConfig()
+    CURRENT_STATE = AppState()
+    if os.path.isfile(CONFIG_FILE):
+        APP_CONFIG, CURRENT_STATE = process_config(CONFIG_FILE)
+
+    logging.basicConfig(
+        level=APP_CONFIG.log_level,
+        format="%(asctime)s rpi: %(message)s",
+    )
+
     controller = HydroController(APP_CONFIG, CURRENT_STATE, MQTTIO_CONFIG_FILE)
     controller.run()
