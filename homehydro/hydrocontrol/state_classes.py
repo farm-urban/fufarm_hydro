@@ -4,7 +4,7 @@ from enum import IntEnum
 import logging
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import yaml
 
 
@@ -75,20 +75,8 @@ class AppState:
     total_dose_time: float = 0
 
     def status_dict(self):
-        """Return the status variables as a dictionary."""
-        return dict(
-            {
-                "calibration_temperature": self.calibration_temperature,
-                "calibration_status": self.calibration_status,
-                "current_ec": self.current_ec,
-                "dose_count": self.dose_count,
-                # "last_dose_time": time.strftime(
-                #     "%a, %d %b %Y %H:%M:%S", time.localtime(self.last_dose_time)
-                # ),
-                "last_dose_time": self.last_dose_time,
-                "total_dose_time": self.total_dose_time,
-            }
-        )
+        """Return the variables as a dictionary."""
+        return asdict(self)
 
     def status_json(self):
         """Return status as json string"""
