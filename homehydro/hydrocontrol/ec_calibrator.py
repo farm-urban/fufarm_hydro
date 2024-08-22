@@ -56,9 +56,9 @@ def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
     _LOG.debug(
         "Calibration got voltages: %s\n temperatures: %s", voltages, temperatures
     )
-    variance = statistics.variance(voltages)
-    if variance > 0.05:
-        raise RuntimeError("Cannot calibrate - variance of voltages is > 0.05")
+    stdev = statistics.stdev(voltages)
+    if stdev > 10:  # Completely arbitrary value - need to determine a sensible value
+        raise RuntimeError("Cannot calibrate - stdev of voltages is > 10")
 
     voltage = statistics.fmean(voltages)
     temperature = statistics.fmean(temperatures)
