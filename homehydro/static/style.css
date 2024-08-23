@@ -6,7 +6,8 @@
 .calibration {
   display: flex;
   flex-direction: column;
-  border: 1;
+  border: solid;
+  padding: 1rem;
 }
 form {
   display: flex;
