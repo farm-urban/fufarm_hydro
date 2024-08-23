@@ -1,8 +1,11 @@
 """Calibrate the EC sensor"""
 
 import logging
-import time
+import os
 import statistics
+import time
+
+
 import yaml
 
 import mqtt_io.modules.sensor.dfr0300 as dfr0300
@@ -66,10 +69,22 @@ def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
     return voltage, temperature
 
 
+def reset_calibration(module):
+    """Very hacky way to reset calibration"""
+    calibration_file = module.calibrator.calibration_file
+    module.kvalue_low = 1.0
+    module.kvalue_mid = 1.0
+    module.kvalue_high = 1.0
+    calibration_file_bak = calibration_file + ".bak"
+    os.rename(calibration_file, calibration_file_bak)
+    return
+
+
 def calibrate(config_file, temperature=25.0) -> tuple[bool, str]:
     try:
         module_config, sensor_config = parse_config(config_file)
         dfr0300_module = _init_module(module_config, "sensor", False)
+        reset_calibration(dfr0300_module)
         dfr0300_module.setup_sensor(sensor_config, None)
         voltage, temperature = calc_calibration_voltage_and_temperature(
             dfr0300_module, temperature
