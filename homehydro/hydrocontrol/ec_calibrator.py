@@ -71,12 +71,14 @@ def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
 
 def reset_calibration(module):
     """Very hacky way to reset calibration"""
-    calibration_file = module.calibrator.calibration_file
     module.kvalue_low = 1.0
     module.kvalue_mid = 1.0
     module.kvalue_high = 1.0
-    calibration_file_bak = calibration_file + ".bak"
-    os.rename(calibration_file, calibration_file_bak)
+    calibration_file = module.calibrator.calibration_file
+    if os.path.isfile(calibration_file):
+        _LOG.info("Resetting EC calibration file: %s", calibration_file)
+        calibration_file_bak = calibration_file + ".bak"
+        os.rename(calibration_file, calibration_file_bak)
     return
 
 
