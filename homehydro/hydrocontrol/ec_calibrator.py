@@ -101,6 +101,8 @@ def calibrate(voltage: float, temperature: float) -> CalibrationData:
     cd = CalibrationData()
     cd.voltage = voltage
     cd.temperature = temperature
+    cd.calibration_status = 0
+    cd.calibration_message = "Calibration Successful"
 
     raw_ec = calc_raw_ec(voltage)
     if 0.9 < raw_ec < 1.9:
@@ -128,8 +130,6 @@ def calibrate(voltage: float, temperature: float) -> CalibrationData:
         cd.calibration_status = 1
         cd.calibration_message = ">>>Buffer Solution Error Try Again<<<"
     cd.calibration_time = time.time()
-    cd.calibration_status = 0
-    cd.calibration_message = "Calibration Successful"
     return cd
 
 
