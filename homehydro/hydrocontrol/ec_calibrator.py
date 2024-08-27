@@ -25,15 +25,15 @@ _LOG = logging.getLogger(__name__)
 class CalibrationData:
     """Class to handle calibration data"""
 
-    kvalue_low: float = INITIAL_KVALUE
-    kvalue_mid: float = INITIAL_KVALUE
-    kvalue_high: float = INITIAL_KVALUE
     buffer_solution: float
     voltage: float
     temperature: float
     calibration_time: int
     calibration_status: int
     calibration_message: str
+    kvalue_low: float = INITIAL_KVALUE
+    kvalue_mid: float = INITIAL_KVALUE
+    kvalue_high: float = INITIAL_KVALUE
 
 
 def read_calibration(calibration_file) -> CalibrationData:
@@ -167,9 +167,9 @@ def parse_config(config_file, module_name="dfr0300"):
 
 def reset_calibration(module):
     """Very hacky way to reset calibration"""
-    module.kvalue_low = 1.0
-    module.kvalue_mid = 1.0
-    module.kvalue_high = 1.0
+    module.kvalue_low = INITIAL_KVALUE
+    module.kvalue_mid = INITIAL_KVALUE
+    module.kvalue_high = INITIAL_KVALUE
     calibration_file = module.calibrator.calibration_file
     if os.path.isfile(calibration_file):
         _LOG.info("Resetting EC calibration file: %s", calibration_file)
@@ -200,9 +200,9 @@ def run_calibration(config_file, temperature=25.0) -> tuple[bool, str]:
 
 if __name__ == "__main__":
     MQTTIO_CONFIG_FILE = "mqtt-io.yml"
-    calibration_temperature = 25.0
+    CALIBRATION_TEMPERATURE = 25.0
     if os.path.isfile(MQTTIO_CONFIG_FILE):
-        run_calibration(MQTTIO_CONFIG_FILE, calibration_temperature)
+        run_calibration(MQTTIO_CONFIG_FILE, CALIBRATION_TEMPERATURE)
     else:
         _LOG.error("Config file not found: %s", MQTTIO_CONFIG_FILE)
         exit(1)
