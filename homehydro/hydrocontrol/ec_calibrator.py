@@ -93,6 +93,7 @@ def calc_calibration_voltage_and_temperature(
         calibration_data.calibration_status = CalibrationStatus.BUFFER_ERROR
         message = f"Cannot calibrate - stdev of voltages is > {max_stdev}"
         calibration_data.calibration_message = message
+        calibration_data.time = time.time()
         _LOG.debug(message)
         return calibration_data
 
@@ -205,7 +206,6 @@ def run_calibration(config_file, temperature=25.0) -> CalibrationData:
     calc_calibration_voltage_and_temperature(
         dfr0300_module, temperature, calibration_data
     )
-    _LOG.debug("Calibration data: %s", calibration_data)
     if calibration_data.calibration_status != CalibrationStatus.BUFFER_ERROR:
         calibrate(calibration_data)
         _LOG.info("Calibrating sensor with values: %s", calibration_data)
