@@ -25,7 +25,7 @@ _LOG = logging.getLogger()
 
 
 class Pump:
-    """Mock class for running pump"""
+    """Class for running peristaltic dosing pump"""
 
     def __init__(self, channel: int):
         # pylint: disable=import-outside-toplevel,import-error
