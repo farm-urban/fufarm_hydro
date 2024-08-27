@@ -59,14 +59,14 @@ def write_calibration(calibration_data, calibration_file) -> None:
         _LOG.warning("Failed to write calibration data: %s", exc)
 
 
-def calc_calibration_voltage_and_temperature(self, temperature):
+def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
     """Calculate calibration voltage and temperature"""
     num_samples = 20
     sample_interval = 1
     voltages = []
     temperatures = []  # for when using a temp sensor
     for _ in range(num_samples):
-        voltage = self.dfr0300_module.board.get_adc_value(self.dfr0300_module.channel)
+        voltage = dfr0300_module.board.get_adc_value(dfr0300_module.channel)
         voltages.append(voltage)
         temperatures.append(temperature)
         time.sleep(sample_interval)
