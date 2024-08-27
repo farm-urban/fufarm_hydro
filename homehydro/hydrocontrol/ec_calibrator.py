@@ -28,9 +28,9 @@ class CalibrationData:
     kvalue_low: float = INITIAL_KVALUE
     kvalue_mid: float = INITIAL_KVALUE
     kvalue_high: float = INITIAL_KVALUE
-    buffer_solution: float = 0.0
-    voltage: float = 0.0
-    temperature: float = 0.0
+    buffer_solution: float = -1.0
+    voltage: float = -1.0
+    temperature: float = -1.0
     calibration_time: int = 0
     calibration_status: int = -1
     calibration_message: str = "Uknown Status"
