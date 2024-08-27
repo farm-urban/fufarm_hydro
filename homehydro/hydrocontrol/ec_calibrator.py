@@ -33,7 +33,7 @@ class CalibrationData:
     temperature: float = 0.0
     calibration_time: int = 0
     calibration_status: int = -1
-    calibration_message: str: "Uknown Status"
+    calibration_message: str = "Uknown Status"
 
 
 def read_calibration(calibration_file) -> CalibrationData:
