@@ -25,15 +25,15 @@ _LOG = logging.getLogger(__name__)
 class CalibrationData:
     """Class to handle calibration data"""
 
-    buffer_solution: float
-    voltage: float
-    temperature: float
-    calibration_time: int
-    calibration_status: int
-    calibration_message: str
     kvalue_low: float = INITIAL_KVALUE
     kvalue_mid: float = INITIAL_KVALUE
     kvalue_high: float = INITIAL_KVALUE
+    buffer_solution: float = 0.0
+    voltage: float = 0.0
+    temperature: float = 0.0
+    calibration_time: int = 0
+    calibration_status: int = -1
+    calibration_message: str: "Uknown Status"
 
 
 def read_calibration(calibration_file) -> CalibrationData:
