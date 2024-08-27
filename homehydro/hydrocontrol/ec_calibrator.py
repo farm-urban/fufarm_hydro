@@ -1,6 +1,7 @@
 """Calibrate the EC sensor"""
 
 import dataclasses
+from enum import IntEnum
 import json
 import logging
 import os
@@ -18,6 +19,15 @@ CALIBRATION_FILE_ENCODING = "ascii"
 CALIBRATION_FILENAME = "ec_calibration.json"
 
 
+class CalibrationStatus(IntEnum):
+    """Enum for calibration status."""
+
+    NOT_CALIBRATED = 0
+    CALIBRATING = 1
+    CALIBRATED = 2
+    ERROR = 3
+
+
 _LOG = logging.getLogger(__name__)
 
 
@@ -32,7 +42,7 @@ class CalibrationData:
     voltage: float = -1.0
     temperature: float = -1.0
     calibration_time: int = 0
-    calibration_status: int = -1
+    calibration_status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
     calibration_message: str = "Uknown Status"
 
 
@@ -101,7 +111,7 @@ def calibrate(voltage: float, temperature: float) -> CalibrationData:
     cd = CalibrationData()
     cd.voltage = voltage
     cd.temperature = temperature
-    cd.calibration_status = 0
+    cd.calibration_status = CalibrationStatus.CALIBRATED
     cd.calibration_message = "Calibration Successful"
 
     raw_ec = calc_raw_ec(voltage)
@@ -129,7 +139,7 @@ def calibrate(voltage: float, temperature: float) -> CalibrationData:
         )
     else:
         # raise ValueError(">>>Buffer Solution Error Try Again<<<")
-        cd.calibration_status = 1
+        cd.calibration_status = CalibrationStatus.ERROR
         cd.calibration_message = "Buffer Solution Error Try Again"
     cd.calibration_time = time.time()
     return cd
@@ -180,24 +190,19 @@ def reset_calibration(module):
     return
 
 
-def run_calibration(config_file, temperature=25.0) -> tuple[bool, str]:
+def run_calibration(config_file, temperature=25.0) -> CalibrationData:
     """Run the calibration process"""
-    try:
-        module_config, sensor_config = parse_config(config_file)
-        dfr0300_module = _init_module(module_config, "sensor", False)
-        reset_calibration(dfr0300_module)
-        dfr0300_module.setup_sensor(sensor_config, None)
-        voltage, temperature = calc_calibration_voltage_and_temperature(
-            dfr0300_module, temperature
-        )
-        calibration_data = calibrate(voltage, temperature)
-        _LOG.info("Calibrating sensor with values: %s", calibration_data)
-        write_calibration(calibration_data, dfr0300_module.calibration_file)
-    except RuntimeError as e:
-        error_msg = f"Error calibrating sensor: {e}"
-        _LOG.error(error_msg)
-        return (False, error_msg)
-    return (True, f"Calibrated at: {time.asctime(time.localtime())}")
+    module_config, sensor_config = parse_config(config_file)
+    dfr0300_module = _init_module(module_config, "sensor", False)
+    reset_calibration(dfr0300_module)
+    dfr0300_module.setup_sensor(sensor_config, None)
+    voltage, temperature = calc_calibration_voltage_and_temperature(
+        dfr0300_module, temperature
+    )
+    calibration_data = calibrate(voltage, temperature)
+    _LOG.info("Calibrating sensor with values: %s", calibration_data)
+    write_calibration(calibration_data, dfr0300_module.calibration_file)
+    return calibration_data
 
 
 if __name__ == "__main__":

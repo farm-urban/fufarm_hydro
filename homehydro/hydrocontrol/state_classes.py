@@ -1,11 +1,12 @@
 """Functions shared between command-line and flask app"""
 
-from enum import IntEnum
 import logging
 import json
 import time
 from dataclasses import dataclass, asdict
 import yaml
+
+from homehydro.hydrocontrol.ec_calibrator import CalibrationStatus
 
 
 def process_config(
@@ -43,15 +44,6 @@ class AppConfig:
     def __repr__(self):
         x = "\n ".join(f"{k} : {repr(v)}" for (k, v) in self.__dict__.items())
         return f"<\n{x}\n>"
-
-
-class CalibrationStatus(IntEnum):
-    """Enum for calibration status."""
-
-    NOT_CALIBRATED = 0
-    CALIBRATING = 1
-    CALIBRATED = 2
-    ERROR = 3
 
 
 @dataclass

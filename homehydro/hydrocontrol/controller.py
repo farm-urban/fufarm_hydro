@@ -17,7 +17,7 @@ from homehydro.hydrocontrol.state_classes import (
     CalibrationStatus,
     process_config,
 )
-from homehydro.hydrocontrol.ec_calibrator import calibrate
+from homehydro.hydrocontrol.ec_calibrator import CalibrationData, run_calibration
 
 
 ID_EC = "ec"
@@ -155,11 +155,11 @@ class HydroController:
         """Calibrate the EC sensor"""
         _LOG.info("Calibrating EC sensor")
         try:
-            _status, message = calibrate(
+            calibration_data: CalibrationData = run_calibration(
                 self.mqttio_config_file, self.current_state.calibration_temperature
             )
-            self.current_state.calibration_status = CalibrationStatus.CALIBRATED
-            self.current_state.calibration_status_message = message
+            self.current_state.calibration_status = calibration_data.calibration_status
+            message = calibration_data.calibration_message
         except Exception as e:
             message = f"Error calibrating EC sensor: {e}"
             _LOG.error(message)
