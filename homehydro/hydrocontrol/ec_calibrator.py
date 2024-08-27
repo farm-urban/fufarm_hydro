@@ -196,3 +196,13 @@ def run_calibration(config_file, temperature=25.0) -> tuple[bool, str]:
         _LOG.error(error_msg)
         return (False, error_msg)
     return (True, f"Calibrated at: {time.asctime(time.localtime())}")
+
+
+if __name__ == "__main__":
+    MQTTIO_CONFIG_FILE = "mqtt-io.yml"
+    calibration_temperature = 25.0
+    if os.path.isfile(MQTTIO_CONFIG_FILE):
+        run_calibration(MQTTIO_CONFIG_FILE, calibration_temperature)
+    else:
+        _LOG.error("Config file not found: %s", MQTTIO_CONFIG_FILE)
+        exit(1)
