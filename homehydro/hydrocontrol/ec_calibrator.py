@@ -170,7 +170,7 @@ def reset_calibration(module):
     module.kvalue_low = INITIAL_KVALUE
     module.kvalue_mid = INITIAL_KVALUE
     module.kvalue_high = INITIAL_KVALUE
-    calibration_file = module.calibrator.calibration_file
+    calibration_file = module.calibration_file
     if os.path.isfile(calibration_file):
         _LOG.info("Resetting EC calibration file: %s", calibration_file)
         calibration_file_bak = calibration_file + ".bak"
