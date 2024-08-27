@@ -26,6 +26,7 @@ class CalibrationStatus(IntEnum):
     CALIBRATING = 1
     CALIBRATED = 2
     ERROR = 3
+    BUFFER_ERROR = 4
 
 
 _LOG = logging.getLogger(__name__)
@@ -69,7 +70,9 @@ def write_calibration(calibration_data, calibration_file) -> None:
         _LOG.warning("Failed to write calibration data: %s", exc)
 
 
-def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
+def calc_calibration_voltage_and_temperature(
+    dfr0300_module, temperature, calibration_data
+):
     """Calculate calibration voltage and temperature"""
     num_samples = 20
     sample_interval = 1
@@ -87,12 +90,16 @@ def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
     stdev = statistics.stdev(voltages)
     max_stdev = 10  # Arbitrary value - need to determine a sensible parameter
     if stdev > max_stdev:
-        raise RuntimeError(f"Cannot calibrate - stdev of voltages is > {max_stdev}")
+        calibration_data.calibration_status = CalibrationStatus.BUFFER_ERROR
+        calibration_data.calibration_message = (
+            f"Cannot calibrate - stdev of voltages is > {max_stdev}"
+        )
+        return calibration_data
 
     voltage = statistics.fmean(voltages)
     temperature = statistics.fmean(temperatures)
     _LOG.debug("Calibration voltage: %s, temperature: %s", voltage, temperature)
-    return voltage, temperature
+    return calibration_data
 
 
 @staticmethod
@@ -101,23 +108,21 @@ def calc_raw_ec(voltage: float) -> float:
     return 1000 * voltage / 820.0 / 200.0
 
 
-def calibrate(voltage: float, temperature: float) -> CalibrationData:
-    """Set the calibration values and write out to file."""
+def calibrate(calibration_data: CalibrationData) -> None:
+    """Calculate the calibration parameters"""
 
     def calc_kvalue(ec_solution: float, voltage: float, temperature: float) -> float:
         comp_ec_solution = ec_solution * (1.0 + 0.0185 * (temperature - 25.0))
         return round(820.0 * 200.0 * comp_ec_solution / 1000.0 / voltage, 2)
 
-    cd = CalibrationData()
-    cd.voltage = voltage
-    cd.temperature = temperature
+    cd = calibration_data
     cd.calibration_status = CalibrationStatus.CALIBRATED
     cd.calibration_message = "Calibration Successful"
 
-    raw_ec = calc_raw_ec(voltage)
+    raw_ec = calc_raw_ec(cd.voltage)
     if 0.9 < raw_ec < 1.9:
         cd.buffer_solution = 1.413
-        cd.kvalue_low = calc_kvalue(1.413, voltage, temperature)
+        cd.kvalue_low = calc_kvalue(1.413, cd.voltage, cd.temperature)
         _LOG.info(
             "Buffer Solution: %fus/cm kvalue_low: %f",
             cd.buffer_solution,
@@ -125,13 +130,13 @@ def calibrate(voltage: float, temperature: float) -> CalibrationData:
         )
     elif 1.9 <= raw_ec < 4:
         cd.buffer_solution = 2.76
-        cd.kvalue_mid = calc_kvalue(2.8, voltage, temperature)
+        cd.kvalue_mid = calc_kvalue(2.8, cd.voltage, cd.temperature)
         _LOG.info(
             "Buffer Solution: %fms/cm kvalue_mid: %f", cd.buffer_solution, cd.kvalue_mid
         )
     elif 9 < raw_ec < 16.8:
         cd.buffer_solution = 12.88
-        cd.kvalue_high = calc_kvalue(12.88, voltage, temperature)
+        cd.kvalue_high = calc_kvalue(12.88, cd.voltage, cd.temperature)
         _LOG.info(
             "Buffer Solution:%fms/cm kvalue_high:%f ",
             cd.buffer_solution,
@@ -142,7 +147,7 @@ def calibrate(voltage: float, temperature: float) -> CalibrationData:
         cd.calibration_status = CalibrationStatus.ERROR
         cd.calibration_message = "Buffer Solution Error Try Again"
     cd.calibration_time = time.time()
-    return cd
+    return
 
 
 def parse_config(config_file, module_name="dfr0300"):
@@ -196,11 +201,13 @@ def run_calibration(config_file, temperature=25.0) -> CalibrationData:
     dfr0300_module = _init_module(module_config, "sensor", False)
     reset_calibration(dfr0300_module)
     dfr0300_module.setup_sensor(sensor_config, None)
-    voltage, temperature = calc_calibration_voltage_and_temperature(
-        dfr0300_module, temperature
+    calibration_data = CalibrationData()
+    calc_calibration_voltage_and_temperature(
+        dfr0300_module, temperature, calibration_data
     )
-    calibration_data = calibrate(voltage, temperature)
-    _LOG.info("Calibrating sensor with values: %s", calibration_data)
+    if calibration_data.calibration_status != CalibrationStatus.BUFFER_ERROR:
+        calibrate(calibration_data)
+        _LOG.info("Calibrating sensor with values: %s", calibration_data)
     write_calibration(calibration_data, dfr0300_module.calibration_file)
     return calibration_data
 
