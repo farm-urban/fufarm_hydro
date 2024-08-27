@@ -54,7 +54,7 @@ def write_calibration(calibration_data, calibration_file) -> None:
             calibration_file, "w", encoding=CALIBRATION_FILE_ENCODING
         ) as file_handle:
             data = dataclasses.asdict(calibration_data)
-            json.dump(data, file_handle, indent=2, encoding=CALIBRATION_FILE_ENCODING)
+            json.dump(data, file_handle, indent=2)
     except IOError as exc:
         _LOG.warning("Failed to write calibration data: %s", exc)
 
@@ -201,8 +201,12 @@ def run_calibration(config_file, temperature=25.0) -> tuple[bool, str]:
 if __name__ == "__main__":
     MQTTIO_CONFIG_FILE = "mqtt-io.yml"
     CALIBRATION_TEMPERATURE = 25.0
-    if os.path.isfile(MQTTIO_CONFIG_FILE):
-        run_calibration(MQTTIO_CONFIG_FILE, CALIBRATION_TEMPERATURE)
-    else:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s rpi: %(message)s",
+    )
+    if not os.path.isfile(MQTTIO_CONFIG_FILE):
         _LOG.error("Config file not found: %s", MQTTIO_CONFIG_FILE)
         exit(1)
+
+    run_calibration(MQTTIO_CONFIG_FILE, CALIBRATION_TEMPERATURE)
