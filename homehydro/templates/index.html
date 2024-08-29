@@ -147,6 +147,7 @@
     })
       .then(response => response.json())
       .then(response => paramsUpdate(response.parameters));
+    ev.submitter.blur(); // Remove focus from the button
   }
 
   function paramsUpdate(parameters) {
@@ -176,6 +177,7 @@
       method: 'POST',
       body: formData
     })
+    ev.submitter.blur(); // Remove focus from the button
   }
 
   var form = document.getElementById('manual-dose-form');

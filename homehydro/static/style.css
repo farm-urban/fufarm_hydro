@@ -1,3 +1,7 @@
+input[type="submit"] {
+  background-color: #cccccc;
+}
+
 .row {
   display: flex;
   flex-direction: row;
