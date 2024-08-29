@@ -110,6 +110,7 @@ def calibrate_ec():
     _LOG.info("Calibrate ecprobe: %s", temperature)
     # mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
     APP_STATE.calibration_status = CalibrationStatus.CALIBRATING
+    APP_STATE.calibration_status_message = "Calibrating..."
     APP_STATE.calibrate_temperature = temperature
     return {"status": "success"}, 200
 
