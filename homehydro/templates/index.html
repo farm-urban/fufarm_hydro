@@ -191,10 +191,11 @@
       body: formData
     })
     ev.submitter.blur(); // Remove focus from the button
+    updateStatus();
   }
 
   var form = document.getElementById('calibrate-ecprobe');
   form.addEventListener('submit', addCalibrateSubmit);
 
-  setInterval(updateState, 10000);
+  setInterval(updateState, 5000);
 </script>
