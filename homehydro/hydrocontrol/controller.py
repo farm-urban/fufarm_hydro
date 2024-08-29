@@ -18,6 +18,10 @@ from homehydro.hydrocontrol.state_classes import (
     process_config,
 )
 from homehydro.hydrocontrol.ec_calibrator import CalibrationData, run_calibration
+from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
+    DFRobotExpansionBoardIIC,
+    DFRobotExpansionBoardServo,
+)
 
 
 ID_EC = "ec"
@@ -30,21 +34,17 @@ class Pump:
     def __init__(self, channel: int):
         # pylint: disable=import-outside-toplevel,import-error
         self.mock = False
+        self.channel = channel
         try:
-            from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
-                DFRobotExpansionBoardIIC,
-                DFRobotExpansionBoardServo,
-            )
-        except ImportError as e:
+            board = DFRobotExpansionBoardIIC(
+                1, 0x10
+            )  # Select i2c bus 1, set address to 0x10
+        except ModuleNotFoundError as e:
             _LOG.error("Error importing pump driver modules: %s", e)
             self.mock = True
 
         if not self.mock:
-            board = DFRobotExpansionBoardIIC(
-                1, 0x10
-            )  # Select i2c bus 1, set address to 0x10
             self.servo = DFRobotExpansionBoardServo(board)
-            self.channel = channel
             board.setup()
             self.servo.begin()
 
