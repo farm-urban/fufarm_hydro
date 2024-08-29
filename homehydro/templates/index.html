@@ -190,6 +190,7 @@
       method: 'POST',
       body: formData
     })
+    ev.submitter.blur(); // Remove focus from the button
   }
 
   var form = document.getElementById('calibrate-ecprobe');
