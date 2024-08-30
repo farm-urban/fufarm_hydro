@@ -7,14 +7,7 @@ license = {text = "BSD-3-Clause"}
 maintainers = [{name = "Jens Thomas", email = "jens@farmurban.co.uk"}]
 dependencies = [
     "flask",
-    "paho-mqtt",
-    "aiomqtt",
-    "confp",
-    "backoff",
-    "smbus",
-    "cerberus",
-    "typing_extensions",
-    "pyyaml"
+    "mqtt-io@git+https://github.com/linucks/mqtt-io.git@dfr0300"
 ]
 
 [project.urls]

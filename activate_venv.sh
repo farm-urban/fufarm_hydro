@@ -6,6 +6,4 @@ if [ ! -d ./venv ]; then
 fi
 
 echo "Activating virtual python environment"
-MQTTIO_DIR=/opt/mqtt-io
 . venv/bin/activate
-export PYTHONPATH=$MQTTIO_DIR:$PYTHONPATH
