@@ -1,7 +1,6 @@
 """"Main Flask App"""
 
 import logging
-import os
 import threading
 from argparse import ArgumentParser
 
@@ -35,8 +34,6 @@ logging.basicConfig(
     level=app_config.log_level,
     format="%(asctime)s rpi: %(message)s",
 )
-_LOG = logging.getLogger(__name__)
-
 app.config["APP_STATE"] = app_state
 
 # In debug mode flask forks intself so we don't want to start the controller twice

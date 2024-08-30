@@ -2,6 +2,14 @@ input[type="submit"] {
   background-color: #cccccc;
 }
 
+label {
+  margin-right: 1em;
+}
+
+output {
+  color: #0a54e9;
+}
+
 .row {
   display: flex;
   flex-direction: row;
