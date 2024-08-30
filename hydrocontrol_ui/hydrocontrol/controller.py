@@ -11,13 +11,13 @@ from typing import Callable
 
 import paho.mqtt.client as mqtt
 
-from homehydro.hydrocontrol.state_classes import (
+from hydrocontrol_ui.hydrocontrol.state_classes import (
     AppConfig,
     AppState,
     CalibrationStatus,
     process_config,
 )
-from homehydro.hydrocontrol.ec_calibrator import CalibrationData, run_calibration
+from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationData, run_calibration
 from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
     DFRobotExpansionBoardIIC,
     DFRobotExpansionBoardServo,

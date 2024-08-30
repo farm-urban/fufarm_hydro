@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass, asdict
 import yaml
 
-from homehydro.hydrocontrol.ec_calibrator import CalibrationStatus
+from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationStatus
 
 
 def process_config(
