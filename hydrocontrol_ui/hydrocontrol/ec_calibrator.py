@@ -148,7 +148,7 @@ def calibrate(calibration_data: CalibrationData) -> None:
     else:
         # raise ValueError(">>>Buffer Solution Error Try Again<<<")
         cd.calibration_status = CalibrationStatus.ERROR
-        cd.calibration_message = "Could not determine the calibration solution is use."
+        cd.calibration_message = "Could not determine the calibration solution in use."
     cd.calibration_time = time.time()
     return
 
