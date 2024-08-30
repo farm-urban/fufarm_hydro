@@ -1,7 +1,7 @@
 app:
   flask_host: "0.0.0.0"
-  #mqtt_host: "localhost"
-  mqtt_host: "homeassistant.local"
+  mqtt_host: "localhost"
+  #mqtt_host: "homeassistant.local"
   mqtt_port: 1883
   mqtt_username: "hamqtt"
   mqtt_password: "UbT4Rn3oY7!S9L"
