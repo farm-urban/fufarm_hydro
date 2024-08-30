@@ -125,7 +125,7 @@ def calibrate(calibration_data: CalibrationData) -> None:
         cd.buffer_solution = 1.413
         cd.kvalue_low = calc_kvalue(1.413, cd.voltage, cd.temperature)
         _LOG.info(
-            "Buffer Solution: %fus/cm kvalue_low: %f",
+            "Calibration Solution: %fus/cm kvalue_low: %f",
             cd.buffer_solution,
             cd.kvalue_low,
         )
@@ -133,20 +133,22 @@ def calibrate(calibration_data: CalibrationData) -> None:
         cd.buffer_solution = 2.76
         cd.kvalue_mid = calc_kvalue(2.8, cd.voltage, cd.temperature)
         _LOG.info(
-            "Buffer Solution: %fms/cm kvalue_mid: %f", cd.buffer_solution, cd.kvalue_mid
+            "Calibration Solution: %fms/cm kvalue_mid: %f",
+            cd.buffer_solution,
+            cd.kvalue_mid,
         )
     elif 9 < raw_ec < 16.8:
         cd.buffer_solution = 12.88
         cd.kvalue_high = calc_kvalue(12.88, cd.voltage, cd.temperature)
         _LOG.info(
-            "Buffer Solution:%fms/cm kvalue_high:%f ",
+            "Calibration Solution:%fms/cm kvalue_high:%f ",
             cd.buffer_solution,
             cd.kvalue_high,
         )
     else:
         # raise ValueError(">>>Buffer Solution Error Try Again<<<")
         cd.calibration_status = CalibrationStatus.ERROR
-        cd.calibration_message = "Buffer Solution Error Try Again"
+        cd.calibration_message = "Could not determine the calibration solution is use."
     cd.calibration_time = time.time()
     return
 
