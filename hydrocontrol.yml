@@ -7,7 +7,7 @@ app:
   mqtt_password: "UbT4Rn3oY7!S9L"
   ec_prefix: "sensors/sensor/ec"
   motor_channel: 0
-  log_level: "DEBUG"
+  log_level: "INFO"
 state:
   control: False
   equilibration_time: 3
