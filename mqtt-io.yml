@@ -7,6 +7,24 @@ mqtt:
   ha_discovery:
     enabled: yes
 
+logging:
+  version: 1
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: default
+      level: INFO
+  formatters:
+    default:
+      format: "%(asctime)s %(name)s [%(levelname)s] %(message)s"
+      datefmt: "%Y-%m-%d %H:%M:%S"
+  loggers:
+    mqtt_io:
+      level: WARN
+      handlers:
+        - console
+      propagate: yes
+
 sensor_modules:
   - name: dfr0300
     module: dfr0300
