@@ -26,7 +26,7 @@ def format_time_filter(s):
 
 @app.route("/")
 def index():
-    return render_template("index.html", app_state=APP_STATE)
+    return render_template("index.html", app_state=APP_STATE, base_url=request.base_url)
 
 
 @app.route("/control", methods=["POST"])
