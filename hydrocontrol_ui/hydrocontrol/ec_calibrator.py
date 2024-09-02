@@ -97,9 +97,13 @@ def calc_calibration_voltage_and_temperature(
         _LOG.debug(message)
         return calibration_data
 
-    voltage = statistics.fmean(voltages)
-    temperature = statistics.fmean(temperatures)
-    _LOG.debug("Calibration voltage: %s, temperature: %s", voltage, temperature)
+    calibration_data.voltage = statistics.fmean(voltages)
+    calibration_data.temperature = statistics.fmean(temperatures)
+    _LOG.debug(
+        "Calibration voltage: %s, temperature: %s",
+        calibration_data.voltage,
+        calibration_data.temperature,
+    )
     return calibration_data
 
 
@@ -129,7 +133,7 @@ def calibrate(calibration_data: CalibrationData) -> None:
             cd.buffer_solution,
             cd.kvalue_low,
         )
-    elif 1.9 <= raw_ec < 4:
+    elif 1.9 <= raw_ec < 7:
         cd.buffer_solution = 2.76
         cd.kvalue_mid = calc_kvalue(2.8, cd.voltage, cd.temperature)
         _LOG.info(
