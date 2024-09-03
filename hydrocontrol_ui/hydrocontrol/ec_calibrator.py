@@ -14,10 +14,11 @@ import yaml
 import mqtt_io.modules.sensor.dfr0300 as dfr0300
 from mqtt_io.server import _init_module
 
+MQTTIO_CONFIG_FILE = "./mqtt-io.yml"
 INITIAL_KVALUE = 1.0
 CALIBRATION_FILE_ENCODING = "ascii"
-CALIBRATION_FILENAME = "ec_calibration.json"
-
+CALIBRATION_TEMPERATURE = 25.0
+CALIBRATION_FILE = "./ec_config.json"
 
 class CalibrationStatus(IntEnum):
     """Enum for calibration status."""
@@ -26,8 +27,6 @@ class CalibrationStatus(IntEnum):
     CALIBRATING = 1
     CALIBRATED = 2
     ERROR = 3
-    BUFFER_ERROR = 4
-
 
 _LOG = logging.getLogger(__name__)
 
@@ -37,7 +36,6 @@ class CalibrationData:
     """Class to handle calibration data"""
 
     kvalue_low: float = INITIAL_KVALUE
-    kvalue_mid: float = INITIAL_KVALUE
     kvalue_high: float = INITIAL_KVALUE
     buffer_solution: float = -1.0
     voltage: float = -1.0
@@ -45,6 +43,37 @@ class CalibrationData:
     calibration_time: int = 0
     calibration_status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
     calibration_message: str = "Uknown Status"
+
+def parse_config(config_file, module_name="dfr0300"):
+    """Parse MQTT-IO config file for sensor module and sensor input"""
+    with open(config_file, "r", encoding="utf8") as stream:
+        config = yaml.safe_load(stream)
+
+    sensor_module_config = config["sensor_modules"]
+    sensor_input_config = config["sensor_inputs"]
+
+    module_config = None
+    for s in sensor_module_config:
+        if s["module"] == module_name:
+            module_config = s
+            break
+    if not module_config:
+        raise ValueError("Module not found")
+
+    sensor_config = None
+    for s in sensor_input_config:
+        if s["module"] == module_config["name"]:
+            sensor_config = s
+            break
+    if not sensor_config:
+        raise ValueError("Sensor not found")
+
+    # Remove the temperature sensor config so we don't try and
+    # access the event bus
+    if dfr0300.TEMPSENSOR_ID in sensor_config:
+        del sensor_config[dfr0300.TEMPSENSOR_ID]
+
+    return module_config, sensor_config
 
 
 def read_calibration(calibration_file) -> CalibrationData:
@@ -90,7 +119,7 @@ def calc_calibration_voltage_and_temperature(
     stdev = statistics.stdev(voltages)
     max_stdev = 10  # Arbitrary value - need to determine a sensible parameter
     if stdev > max_stdev:
-        calibration_data.calibration_status = CalibrationStatus.BUFFER_ERROR
+        calibration_data.calibration_status = CalibrationStatus.ERROR
         message = f"Cannot calibrate - stdev of voltages is > {max_stdev}"
         calibration_data.calibration_message = message
         calibration_data.time = time.time()
@@ -125,6 +154,7 @@ def calibrate(calibration_data: CalibrationData) -> None:
     cd.calibration_message = "Calibration Successful"
 
     raw_ec = calc_raw_ec(cd.voltage)
+    # _LOG.debug("GOT VOLTAGE %f RAW EC: %f",cd.voltage, raw_ec)
     if 0.9 < raw_ec < 1.9:
         cd.buffer_solution = 1.413
         cd.kvalue_low = calc_kvalue(1.413, cd.voltage, cd.temperature)
@@ -133,15 +163,8 @@ def calibrate(calibration_data: CalibrationData) -> None:
             cd.buffer_solution,
             cd.kvalue_low,
         )
-    elif 1.9 <= raw_ec < 7:
-        cd.buffer_solution = 2.76
-        cd.kvalue_mid = calc_kvalue(2.8, cd.voltage, cd.temperature)
-        _LOG.info(
-            "Calibration Solution: %fms/cm kvalue_mid: %f",
-            cd.buffer_solution,
-            cd.kvalue_mid,
-        )
-    elif 9 < raw_ec < 16.8:
+    #elif 9 < raw_ec < 16.8: # original values from DFRobot
+    elif 9 < raw_ec < 20:
         cd.buffer_solution = 12.88
         cd.kvalue_high = calc_kvalue(12.88, cd.voltage, cd.temperature)
         _LOG.info(
@@ -150,78 +173,40 @@ def calibrate(calibration_data: CalibrationData) -> None:
             cd.kvalue_high,
         )
     else:
-        # raise ValueError(">>>Buffer Solution Error Try Again<<<")
         cd.calibration_status = CalibrationStatus.ERROR
         cd.calibration_message = "Could not determine the calibration solution in use."
     cd.calibration_time = time.time()
     return
 
-
-def parse_config(config_file, module_name="dfr0300"):
-    """Parse MQTT-IO config file for sensor module and sensor input"""
-    with open(config_file, "r", encoding="utf8") as stream:
-        config = yaml.safe_load(stream)
-
-    sensor_module_config = config["sensor_modules"]
-    sensor_input_config = config["sensor_inputs"]
-
-    module_config = None
-    for s in sensor_module_config:
-        if s["module"] == module_name:
-            module_config = s
-            break
-    if not module_config:
-        raise ValueError("Module not found")
-
-    sensor_config = None
-    for s in sensor_input_config:
-        if s["module"] == module_config["name"]:
-            sensor_config = s
-            break
-    if not sensor_config:
-        raise ValueError("Sensor not found")
-
-    # Remove the temperature sensor config so we don't try and
-    # access the event bus
-    if dfr0300.TEMPSENSOR_ID in sensor_config:
-        del sensor_config[dfr0300.TEMPSENSOR_ID]
-
-    return module_config, sensor_config
-
-
-def reset_calibration(module):
-    """Very hacky way to reset calibration"""
-    module.kvalue_low = INITIAL_KVALUE
-    module.kvalue_mid = INITIAL_KVALUE
-    module.kvalue_high = INITIAL_KVALUE
-    calibration_file = module.calibration_file
-    if os.path.isfile(calibration_file):
-        _LOG.info("Resetting EC calibration file: %s", calibration_file)
-        calibration_file_bak = calibration_file + ".bak"
-        os.rename(calibration_file, calibration_file_bak)
-    return
-
-
 def run_calibration(config_file, temperature=25.0) -> CalibrationData:
     """Run the calibration process"""
     module_config, sensor_config = parse_config(config_file)
     dfr0300_module = _init_module(module_config, "sensor", False)
-    reset_calibration(dfr0300_module)
     dfr0300_module.setup_sensor(sensor_config, None)
     calibration_data = CalibrationData()
+    if os.path.isfile(CALIBRATION_FILE):
+        cd_tmp = read_calibration(CALIBRATION_FILE)
+        _LOG.debug("Read Calibration Data: %s", calibration_data)
+        calibration_data.kvalue_low = cd_tmp.kvalue_low
+        calibration_data.kvalue_high = cd_tmp.kvalue_high
+
     calc_calibration_voltage_and_temperature(
         dfr0300_module, temperature, calibration_data
     )
-    if calibration_data.calibration_status != CalibrationStatus.BUFFER_ERROR:
-        calibrate(calibration_data)
-        _LOG.info("Calibrating sensor with values: %s", calibration_data)
+    if calibration_data.calibration_status == CalibrationStatus.ERROR:
+        _LOG.warn("Error reading stable voltages when calibrating EC probe: %s", calibration_data)
+        return calibration_data
+
+    calibrate(calibration_data)
+    if calibration_data.calibration_status == CalibrationStatus.ERROR:
+        _LOG.warn("Buffer solution error when calibrating EC probe: %s", calibration_data)
+        return calibration_data
+
     write_calibration(calibration_data, dfr0300_module.calibration_file)
     return calibration_data
 
 
 if __name__ == "__main__":
-    MQTTIO_CONFIG_FILE = "mqtt-io.yml"
-    CALIBRATION_TEMPERATURE = 25.0
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s rpi: %(message)s",
