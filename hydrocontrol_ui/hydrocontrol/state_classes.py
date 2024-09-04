@@ -61,7 +61,7 @@ class AppState:
     target_ec: float = 1.8
     dose_duration: int = 5
     # State variables
-    current_ec: float = 10.0  # Set to a high value to prevent dosing before reading EC
+    current_ec: float = 999.0  # Set to a high value to prevent dosing before reading EC
     dose_count: int = 0
     last_dose_time: float = time.time() - equilibration_time
     total_dose_time: float = 0
