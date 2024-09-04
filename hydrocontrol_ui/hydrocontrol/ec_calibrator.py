@@ -19,6 +19,10 @@ INITIAL_KVALUE = 1.0
 CALIBRATION_FILE_ENCODING = "ascii"
 CALIBRATION_TEMPERATURE = 25.0
 CALIBRATION_FILE = "./ec_config.json"
+LOW_BUFFER_SOLUTION=1.413
+HIGH_BUFFER_SOLUTION=12.88
+RES2=820.0
+ECREF=200.0
 
 class CalibrationStatus(IntEnum):
     """Enum for calibration status."""
@@ -138,16 +142,16 @@ def calc_calibration_voltage_and_temperature(
 
 @staticmethod
 def calc_raw_ec(voltage: float) -> float:
-    """Convert voltage to raw EC"""
-    return 1000 * voltage / 820.0 / 200.0
-
+    """Convert voltage to raw EC
+    """
+    return 1000 * voltage / RES2 / ECREF
 
 def calibrate(calibration_data: CalibrationData) -> None:
     """Calculate the calibration parameters"""
 
     def calc_kvalue(ec_solution: float, voltage: float, temperature: float) -> float:
         comp_ec_solution = ec_solution * (1.0 + 0.0185 * (temperature - 25.0))
-        return round(820.0 * 200.0 * comp_ec_solution / 1000.0 / voltage, 2)
+        return round(RES2 * ECREF * comp_ec_solution / 1000.0 / voltage, 2)
 
     cd = calibration_data
     cd.calibration_status = CalibrationStatus.CALIBRATED
@@ -156,8 +160,8 @@ def calibrate(calibration_data: CalibrationData) -> None:
     raw_ec = calc_raw_ec(cd.voltage)
     # _LOG.debug("GOT VOLTAGE %f RAW EC: %f",cd.voltage, raw_ec)
     if 0.9 < raw_ec < 1.9:
-        cd.buffer_solution = 1.413
-        cd.kvalue_low = calc_kvalue(1.413, cd.voltage, cd.temperature)
+        cd.buffer_solution = LOW_BUFFER_SOLUTION
+        cd.kvalue_low = calc_kvalue(LOW_BUFFER_SOLUTION, cd.voltage, cd.temperature)
         _LOG.info(
             "Calibration Solution: %fus/cm kvalue_low: %f",
             cd.buffer_solution,
@@ -165,8 +169,8 @@ def calibrate(calibration_data: CalibrationData) -> None:
         )
     #elif 9 < raw_ec < 16.8: # original values from DFRobot
     elif 9 < raw_ec < 20:
-        cd.buffer_solution = 12.88
-        cd.kvalue_high = calc_kvalue(12.88, cd.voltage, cd.temperature)
+        cd.buffer_solution = HIGH_BUFFER_SOLUTION
+        cd.kvalue_high = calc_kvalue(HIGH_BUFFER_SOLUTION, cd.voltage, cd.temperature)
         _LOG.info(
             "Calibration Solution:%fms/cm kvalue_high:%f ",
             cd.buffer_solution,
@@ -175,18 +179,22 @@ def calibrate(calibration_data: CalibrationData) -> None:
     else:
         cd.calibration_status = CalibrationStatus.ERROR
         cd.calibration_message = "Could not determine the calibration solution in use."
+
     cd.calibration_time = time.time()
     return
 
+MODULE = None
 def run_calibration(config_file, temperature=25.0) -> CalibrationData:
     """Run the calibration process"""
     module_config, sensor_config = parse_config(config_file)
     dfr0300_module = _init_module(module_config, "sensor", False)
     dfr0300_module.setup_sensor(sensor_config, None)
+    global MODULE
+    MODULE = dfr0300_module
     calibration_data = CalibrationData()
     if os.path.isfile(CALIBRATION_FILE):
         cd_tmp = read_calibration(CALIBRATION_FILE)
-        _LOG.debug("Read Calibration Data: %s", calibration_data)
+        _LOG.debug("Read Calibration Data: %s", cd_tmp)
         calibration_data.kvalue_low = cd_tmp.kvalue_low
         calibration_data.kvalue_high = cd_tmp.kvalue_high
 
