@@ -19,11 +19,11 @@
 <hr />
 <h4>Status</h4>
 <div class="row">
-  <label for="current-ec">Current EC:&nbsp</label>
-  <output id="current-ec">{{app_state.current_ec}}</output>
+  <label for="current-ec">Current EC</label>
+  <output id="current-ec">{{ app_state.current_ec | round(2) }}</output>
 </div>
 <div class="row">
-  <label for="last-dosetime">Last Dose Time:&nbsp</label>
+  <label for="last-dosetime">Last Dose Time:</label>
   <output id="last-dosetime"
     >{{ app_state.last_dose_time | format_time}}</output
   >

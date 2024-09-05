@@ -8,7 +8,7 @@ function updateState() {
 
 function updateStatus(data) {
   const current_ec = document.getElementById("current-ec");
-  current_ec.innerText = data.state.current_ec;
+  current_ec.innerText = data.state.current_ec.toFixed(2);
   const dose_time = document.getElementById("last-dosetime");
   dose_time.innerText = new Date(
     data.state.last_dose_time * 1000
