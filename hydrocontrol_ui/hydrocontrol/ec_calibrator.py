@@ -19,10 +19,15 @@ INITIAL_KVALUE = 1.0
 CALIBRATION_FILE_ENCODING = "ascii"
 CALIBRATION_TEMPERATURE = 25.0
 CALIBRATION_FILE = "./ec_config.json"
-LOW_BUFFER_SOLUTION=1.413
-HIGH_BUFFER_SOLUTION=12.88
-RES2=820.0
-ECREF=200.0
+LOW_BUFFER_SOLUTION = 1.413
+HIGH_BUFFER_SOLUTION = 12.88
+RES2 = 820.0
+ECREF = 200.0
+
+
+class CalibrationException(Exception):
+    pass
+
 
 class CalibrationStatus(IntEnum):
     """Enum for calibration status."""
@@ -32,21 +37,40 @@ class CalibrationStatus(IntEnum):
     CALIBRATED = 2
     ERROR = 3
 
+
 _LOG = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
+class CalibrationPoint:
+    """Class to handle calibration of a single point"""
+
+    buffer_solution: float = -1.0
+    voltage: float = -1.0
+    temperature: float = -1.0
+    time: int = 0
+    status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
+    message: str = "Unknown Status"
+
+
+@dataclasses.dataclass(slots=True)
 class CalibrationData:
     """Class to handle calibration data"""
 
     kvalue_low: float = INITIAL_KVALUE
     kvalue_high: float = INITIAL_KVALUE
-    buffer_solution: float = -1.0
-    voltage: float = -1.0
-    temperature: float = -1.0
-    calibration_time: int = 0
-    calibration_status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
-    calibration_message: str = "Uknown Status"
+    status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
+    message: str = "Unknown Status"
+    point_low: CalibrationPoint = dataclasses.field(default_factory=CalibrationPoint)
+    point_high: CalibrationPoint = dataclasses.field(default_factory=CalibrationPoint)
+
+    def __post_init__(self):
+        """https://stackoverflow.com/questions/53376099/python-dataclass-from-a-nested-dict"""
+        if isinstance(self.point_low, dict):
+            self.point_low = CalibrationPoint(**self.point_low)
+        if isinstance(self.point_high, dict):
+            self.point_high = CalibrationPoint(**self.point_high)
+
 
 def parse_config(config_file, module_name="dfr0300"):
     """Parse MQTT-IO config file for sensor module and sensor input"""
@@ -103,9 +127,7 @@ def write_calibration(calibration_data, calibration_file) -> None:
         _LOG.warning("Failed to write calibration data: %s", exc)
 
 
-def calc_calibration_voltage_and_temperature(
-    dfr0300_module, temperature, calibration_data
-):
+def calc_calibration_voltage_and_temperature(dfr0300_module, temperature):
     """Calculate calibration voltage and temperature"""
     num_samples = 20
     sample_interval = 1
@@ -123,30 +145,28 @@ def calc_calibration_voltage_and_temperature(
     stdev = statistics.stdev(voltages)
     max_stdev = 10  # Arbitrary value - need to determine a sensible parameter
     if stdev > max_stdev:
-        calibration_data.calibration_status = CalibrationStatus.ERROR
-        message = f"Cannot calibrate - stdev of voltages is > {max_stdev}"
-        calibration_data.calibration_message = message
-        calibration_data.time = time.time()
-        _LOG.debug(message)
-        return calibration_data
-
-    calibration_data.voltage = statistics.fmean(voltages)
-    calibration_data.temperature = statistics.fmean(temperatures)
+        raise CalibrationException(
+            f"Cannot calibrate - stdev of voltages is > {max_stdev}"
+        )
+    voltage = statistics.fmean(voltages)
+    temperature = statistics.fmean(temperatures)
     _LOG.debug(
         "Calibration voltage: %s, temperature: %s",
-        calibration_data.voltage,
-        calibration_data.temperature,
+        voltage,
+        temperature,
     )
-    return calibration_data
+    return voltage, temperature
 
 
 @staticmethod
 def calc_raw_ec(voltage: float) -> float:
-    """Convert voltage to raw EC
-    """
+    """Convert voltage to raw EC"""
     return 1000 * voltage / RES2 / ECREF
 
-def calibrate(calibration_data: CalibrationData) -> None:
+
+def calibrate(
+    calibration_data: CalibrationData, voltage: float, temperature: float
+) -> None:
     """Calculate the calibration parameters"""
 
     def calc_kvalue(ec_solution: float, voltage: float, temperature: float) -> float:
@@ -154,62 +174,74 @@ def calibrate(calibration_data: CalibrationData) -> None:
         return round(RES2 * ECREF * comp_ec_solution / 1000.0 / voltage, 2)
 
     cd = calibration_data
-    cd.calibration_status = CalibrationStatus.CALIBRATED
-    cd.calibration_message = "Calibration Successful"
-
-    raw_ec = calc_raw_ec(cd.voltage)
-    # _LOG.debug("GOT VOLTAGE %f RAW EC: %f",cd.voltage, raw_ec)
+    cd.status = CalibrationStatus.ERROR
+    cd.message = "Could not determine the calibration solution in use."
+    # raw_ec = calc_raw_ec(voltage)
+    raw_ec = 1.2
+    # _LOG.debug("GOT VOLTAGE %f RAW EC: %f",voltage, raw_ec)
     if 0.9 < raw_ec < 1.9:
-        cd.buffer_solution = LOW_BUFFER_SOLUTION
-        cd.kvalue_low = calc_kvalue(LOW_BUFFER_SOLUTION, cd.voltage, cd.temperature)
+        msg = "Calibration Low Successful"
+        cd.kvalue_low = calc_kvalue(LOW_BUFFER_SOLUTION, voltage, temperature)
+        cd.status = CalibrationStatus.CALIBRATED
+        cd.message = msg
+        cd.point_low.buffer_solution = LOW_BUFFER_SOLUTION
+        cd.point_low.status = CalibrationStatus.CALIBRATED
+        cd.point_low.message = msg
+        cd.point_low.time = time.time()
         _LOG.info(
             "Calibration Solution: %fus/cm kvalue_low: %f",
-            cd.buffer_solution,
+            cd.point_low.buffer_solution,
             cd.kvalue_low,
         )
-    #elif 9 < raw_ec < 16.8: # original values from DFRobot
+    # elif 9 < raw_ec < 16.8: # original values from DFRobot
     elif 9 < raw_ec < 20:
-        cd.buffer_solution = HIGH_BUFFER_SOLUTION
-        cd.kvalue_high = calc_kvalue(HIGH_BUFFER_SOLUTION, cd.voltage, cd.temperature)
+        msg = "Calibration High Successful"
+        cd.kvalue_high = calc_kvalue(HIGH_BUFFER_SOLUTION, voltage, temperature)
+        cd.status = CalibrationStatus.CALIBRATED
+        cd.message = msg
+        cd.point_high.buffer_solution = HIGH_BUFFER_SOLUTION
+        cd.point_high.status = CalibrationStatus.CALIBRATED
+        cd.point_high.message = msg
+        cd.point_high.time = time.time()
         _LOG.info(
             "Calibration Solution:%fms/cm kvalue_high:%f ",
-            cd.buffer_solution,
+            cd.point_high.buffer_solution,
             cd.kvalue_high,
         )
-    else:
-        cd.calibration_status = CalibrationStatus.ERROR
-        cd.calibration_message = "Could not determine the calibration solution in use."
-
-    cd.calibration_time = time.time()
     return
 
-MODULE = None
+
 def run_calibration(config_file, temperature=25.0) -> CalibrationData:
     """Run the calibration process"""
     module_config, sensor_config = parse_config(config_file)
     dfr0300_module = _init_module(module_config, "sensor", False)
     dfr0300_module.setup_sensor(sensor_config, None)
-    global MODULE
-    MODULE = dfr0300_module
     calibration_data = CalibrationData()
     if os.path.isfile(CALIBRATION_FILE):
-        cd_tmp = read_calibration(CALIBRATION_FILE)
-        _LOG.debug("Read Calibration Data: %s", cd_tmp)
-        calibration_data.kvalue_low = cd_tmp.kvalue_low
-        calibration_data.kvalue_high = cd_tmp.kvalue_high
+        calibration_data = read_calibration(CALIBRATION_FILE)
+        _LOG.debug("Read Calibration Data: %s", calibration_data)
+        # calibration_data.kvalue_low = cd_tmp.kvalue_low
+        # calibration_data.kvalue_high = cd_tmp.kvalue_high
 
-    calc_calibration_voltage_and_temperature(
-        dfr0300_module, temperature, calibration_data
-    )
-    if calibration_data.calibration_status == CalibrationStatus.ERROR:
-        _LOG.warn("Error reading stable voltages when calibrating EC probe: %s", calibration_data)
+    try:
+        voltage, temperature = calc_calibration_voltage_and_temperature(
+            dfr0300_module, temperature
+        )
+    except CalibrationException as e:
+        _LOG.warning(
+            "Error reading stable voltages when calibrating EC probe: %s",
+            e,
+        )
+        calibration_data.status = CalibrationStatus.ERROR
+        calibration_data.message = e
         return calibration_data
 
-    calibrate(calibration_data)
-    if calibration_data.calibration_status == CalibrationStatus.ERROR:
-        _LOG.warn("Buffer solution error when calibrating EC probe: %s", calibration_data)
+    calibrate(calibration_data, voltage, temperature)
+    if calibration_data.status == CalibrationStatus.ERROR:
+        _LOG.warning(
+            "Buffer solution error when calibrating EC probe: %s", calibration_data
+        )
         return calibration_data
-
     write_calibration(calibration_data, dfr0300_module.calibration_file)
     return calibration_data
 

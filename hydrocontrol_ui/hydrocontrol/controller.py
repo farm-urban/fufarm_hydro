@@ -5,6 +5,7 @@
 import logging
 import os
 import socket
+import subprocess
 import time
 
 from typing import Callable
@@ -63,26 +64,63 @@ class Pump:
         return
 
 
+class MQTT_IO:
+    """Handles controlling an mqtt-io process"""
+
+    def __init__(self, config_file):
+        if not os.path.isfile(config_file):
+            raise FileNotFoundError(f"Cannot find config file: {config_file}")
+        self.config_file = config_file
+        self.process = None
+        # self.mqtt_logfile = None
+
+    def start(self):
+        mqtt_logfile_name = "mqtt_io.log"
+        # Need to think about the best place to close the filehandle
+        mqtt_logfile = open(mqtt_logfile_name, mode="w")
+        self.process = subprocess.Popen(
+            ["python3", "-m", "mqtt_io", self.config_file],
+            stdout=mqtt_logfile,
+            stderr=subprocess.STDOUT,
+            close_fds=True,
+        )
+        _LOG.debug("Started MQTT-IO process: %s",self.process)
+        if not self.running():
+            raise RuntimeError(
+                f"Problem starting MQTT IO process. Check log {mqtt_logfile_name}"
+            )
+
+    def restart(self):
+        if self.running():
+            self.process.kill()
+        else:
+            _LOG.warning("MQTT_IO restart - process wasn't running.")
+        self.start()
+
+    def running(self):
+        self.process.poll()
+        return self.process.returncode is None
+
+
 class HydroController:
     """Hydroponic controller"""
 
     def __init__(
         self, app_config: AppConfig, current_state: AppState, mqttio_config_file: str
     ):
-
         self.current_state = current_state
         self.app_config = app_config
         self.mqttio_config_file = mqttio_config_file
+        self.loop_delay = 3
 
+        self.mqttio_controller = MQTT_IO(self.mqttio_config_file)
         self.mqtt_client = self.setup_mqtt()
         self.ec_pump = Pump(app_config.motor_channel)
 
-        self.loop_delay = 3
 
     def setup_mqtt(self):
         """Setup the MQTT client and subscribe to topics."""
-        # client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-        client = mqtt.Client()
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         host = self.app_config.mqtt_host
         port = self.app_config.mqtt_port
         username = self.app_config.mqtt_username
@@ -102,8 +140,7 @@ class HydroController:
     def create_on_connect(self) -> Callable:
         """Create a callback to handle connection to MQTT broker."""
 
-        def on_mqtt_connect(client, _userdata, _flags, _reason_code):
-            # def on_connect(client, _userdata, _flags, _reason_code, _properties):
+        def on_mqtt_connect(client: mqtt.Client, _userdata, _connect_flags, _reason_code, _properties):
             """Subscribe to topics on connect."""
             retcodes = []
             subscribed = []
@@ -158,12 +195,16 @@ class HydroController:
             calibration_data: CalibrationData = run_calibration(
                 self.mqttio_config_file, self.current_state.calibration_temperature
             )
-            self.current_state.calibration_status = calibration_data.calibration_status
-            message = calibration_data.calibration_message
+            self.current_state.calibration_status = calibration_data.status
+            message = calibration_data.message
         except Exception as e:
             message = f"Error calibrating EC sensor: {e}"
             _LOG.error(message)
             self.current_state.calibration_status = CalibrationStatus.ERROR
+
+        if self.current_state.calibration_status == CalibrationStatus.CALIBRATED:
+            self.mqttio_controller.restart()
+
         self.current_state.calibration_status_message = message
         return
 
@@ -184,12 +225,16 @@ class HydroController:
     def run(self):
         """Run the hydro controller"""
         self.mqtt_client.loop_start()
+        self.mqttio_controller.start()
         while True:
             while not self.mqtt_client.is_connected():
                 _LOG.warning("mqtt_client not connected")
                 self.mqtt_client.reconnect()
                 time.sleep(2)
-            # _LOG.debug("%s", self.current_state)
+
+            if not self.mqttio_controller.running():
+                _LOG.warning("MQTT IO process isn't running!")
+            # _LOG.debug("%s %s", id(self.current_state), self.current_state)
 
             if self.current_state.calibration_status == CalibrationStatus.CALIBRATING:
                 self.calibrate_ec()
