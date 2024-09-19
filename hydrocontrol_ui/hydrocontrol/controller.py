@@ -6,6 +6,7 @@ import logging
 import os
 import socket
 import subprocess
+import sys
 import time
 
 from typing import Callable
@@ -79,7 +80,7 @@ class MQTT_IO:
         # Need to think about the best place to close the filehandle
         mqtt_logfile = open(mqtt_logfile_name, mode="w")
         self.process = subprocess.Popen(
-            ["python3", "-m", "mqtt_io", self.config_file],
+            [sys.executable, "-m", "mqtt_io", self.config_file],
             stdout=mqtt_logfile,
             stderr=subprocess.STDOUT,
             close_fds=True,
