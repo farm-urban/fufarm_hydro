@@ -7,9 +7,11 @@ app:
   mqtt_password: "UbT4Rn3oY7!S9L"
   ec_prefix: "sensors/sensor/ec"
   motor_channel: 0
-  log_level: "INFO"
+  log_level: "DEBUG"
+  ec_calibration_file: "./ec-config.json"
+  mqttio_config_file: "./mqtt-io.yml"
 state:
   control: False
-  equilibration_time: 3
-  target_ec: 1.8
+  equilibration_time: 30
+  target_ec: 0.5
   dose_duration: 5
