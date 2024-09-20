@@ -20,11 +20,11 @@ function updateStatus(data) {
   const calibration_temperature = document.getElementById(
     "calibrate-ecprobe-temperature"
   );
-  calibration_temperature.innerText = data.state.calibration_temperature;
+  calibration_temperature.innerText = data.state.calibration_data.temperature;
   const calibration_status = document.getElementById(
     "calibrate-ecprobe-status"
   );
-  calibration_status.innerText = data.state.calibration_status_message;
+  calibration_status.innerText = data.state.calibration_data.message;
 }
 
 function addParamsSubmit(ev) {

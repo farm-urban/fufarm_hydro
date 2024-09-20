@@ -1,6 +1,7 @@
 """Calibrate the EC sensor"""
 
 import dataclasses
+import datetime
 from enum import IntEnum
 import json
 import logging
@@ -18,7 +19,7 @@ MQTTIO_CONFIG_FILE = "./mqtt-io.yml"
 INITIAL_KVALUE = 1.0
 CALIBRATION_FILE_ENCODING = "ascii"
 CALIBRATION_TEMPERATURE = 25.0
-CALIBRATION_FILE = "./ec_config.json"
+CALIBRATION_VALID = 60*60*24*28 # 28 days
 LOW_BUFFER_SOLUTION = 1.413
 HIGH_BUFFER_SOLUTION = 12.88
 RES2 = 820.0
@@ -59,6 +60,7 @@ class CalibrationData:
 
     kvalue_low: float = INITIAL_KVALUE
     kvalue_high: float = INITIAL_KVALUE
+    temperature: float = CALIBRATION_TEMPERATURE
     status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
     message: str = "Unknown Status"
     point_low: CalibrationPoint = dataclasses.field(default_factory=CalibrationPoint)
@@ -70,6 +72,33 @@ class CalibrationData:
             self.point_low = CalibrationPoint(**self.point_low)
         if isinstance(self.point_high, dict):
             self.point_high = CalibrationPoint(**self.point_high)
+        if self.calibration_time < 0:
+            self.status = CalibrationStatus.NOT_CALIBRATED
+            self.message = "Not Calibrated"            
+        elif time.time() - self.calibration_time <= CALIBRATION_VALID:
+            self.status = CalibrationStatus.CALIBRATED
+            timestamp = datetime.datetime.fromtimestamp(self.calibration_time)
+            self.message = f"Calibration OK. Last calibrated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        elif time.time() - self.calibration_time > CALIBRATION_VALID:
+            self.status = CalibrationStatus.NOT_CALIBRATED
+            timestamp = datetime.datetime.fromtimestamp(self.calibration_time)
+            self.message = f"Calibration expired. Last calibrated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+    
+    @property
+    def calibration_time(self) -> int:
+        time_low = self._calibration_time(self.point_low)
+        time_high = self._calibration_time(self.point_high)
+        if time_low > 0 and time_high > 0:
+            if time_low > time_high:
+                return time_low
+            return time_high
+        return -1
+
+    @staticmethod
+    def _calibration_time(point: CalibrationPoint) -> int:
+        if point and point.status == CalibrationStatus.CALIBRATED:
+            return point.time
+        return -1
 
 
 def parse_config(config_file, module_name="dfr0300"):
@@ -176,8 +205,7 @@ def calibrate(
     cd = calibration_data
     cd.status = CalibrationStatus.ERROR
     cd.message = "Could not determine the calibration solution in use."
-    # raw_ec = calc_raw_ec(voltage)
-    raw_ec = 1.2
+    raw_ec = calc_raw_ec(voltage)
     # _LOG.debug("GOT VOLTAGE %f RAW EC: %f",voltage, raw_ec)
     if 0.9 < raw_ec < 1.9:
         msg = "Calibration Low Successful"
@@ -211,21 +239,14 @@ def calibrate(
     return
 
 
-def run_calibration(config_file, temperature=25.0) -> CalibrationData:
+def run_calibration(calibration_data: CalibrationData, mqttio_config_file: str) -> None:
     """Run the calibration process"""
-    module_config, sensor_config = parse_config(config_file)
+    module_config, sensor_config = parse_config(mqttio_config_file)
     dfr0300_module = _init_module(module_config, "sensor", False)
     dfr0300_module.setup_sensor(sensor_config, None)
-    calibration_data = CalibrationData()
-    if os.path.isfile(CALIBRATION_FILE):
-        calibration_data = read_calibration(CALIBRATION_FILE)
-        _LOG.debug("Read Calibration Data: %s", calibration_data)
-        # calibration_data.kvalue_low = cd_tmp.kvalue_low
-        # calibration_data.kvalue_high = cd_tmp.kvalue_high
-
     try:
         voltage, temperature = calc_calibration_voltage_and_temperature(
-            dfr0300_module, temperature
+            dfr0300_module, calibration_data.temperature
         )
     except CalibrationException as e:
         _LOG.warning(
@@ -234,7 +255,7 @@ def run_calibration(config_file, temperature=25.0) -> CalibrationData:
         )
         calibration_data.status = CalibrationStatus.ERROR
         calibration_data.message = e
-        return calibration_data
+        return
 
     calibrate(calibration_data, voltage, temperature)
     if calibration_data.status == CalibrationStatus.ERROR:
@@ -243,7 +264,7 @@ def run_calibration(config_file, temperature=25.0) -> CalibrationData:
         )
         return calibration_data
     write_calibration(calibration_data, dfr0300_module.calibration_file)
-    return calibration_data
+    return
 
 
 if __name__ == "__main__":

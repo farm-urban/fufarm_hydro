@@ -19,7 +19,7 @@ from hydrocontrol_ui.hydrocontrol.state_classes import (
     CalibrationStatus,
     process_config,
 )
-from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationData, run_calibration
+from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationData, read_calibration, run_calibration
 from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
     DFRobotExpansionBoardIIC,
     DFRobotExpansionBoardServo,
@@ -107,19 +107,17 @@ class HydroController:
     """Hydroponic controller"""
 
     def __init__(
-        self, app_config: AppConfig, current_state: AppState, mqttio_config_file: str
-    ):
+        self, app_config: AppConfig, current_state: AppState):
         self.current_state = current_state
         self.app_config = app_config
-        self.mqttio_config_file = mqttio_config_file
         self.loop_delay = 3
 
-        self.mqttio_controller = MQTT_IO(self.mqttio_config_file)
+        self.mqttio_controller = MQTT_IO(self.app_config.mqttio_config_file)
         self.mqtt_client = self.setup_mqtt()
         self.ec_pump = Pump(app_config.motor_channel)
 
 
-    def setup_mqtt(self):
+    def setup_mqtt(self): 
         """Setup the MQTT client and subscribe to topics."""
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         host = self.app_config.mqtt_host
@@ -193,20 +191,17 @@ class HydroController:
         """Calibrate the EC sensor"""
         _LOG.info("Calibrating EC sensor")
         try:
-            calibration_data: CalibrationData = run_calibration(
-                self.mqttio_config_file, self.current_state.calibration_temperature
-            )
-            self.current_state.calibration_status = calibration_data.status
-            message = calibration_data.message
+            run_calibration(self.current_state.calibration_data, self.app_config.mqttio_config_file)
+            # self.current_state.calibration_status = calibration_data.status
+            # message = calibration_data.message
         except Exception as e:
             message = f"Error calibrating EC sensor: {e}"
             _LOG.error(message)
-            self.current_state.calibration_status = CalibrationStatus.ERROR
+            self.current_state.calibration_data.status = CalibrationStatus.ERROR
+            self.current_state.calibration_data.message = message
 
-        if self.current_state.calibration_status == CalibrationStatus.CALIBRATED:
+        if self.current_state.calibration_data.status == CalibrationStatus.CALIBRATED:
             self.mqttio_controller.restart()
-
-        self.current_state.calibration_status_message = message
         return
 
     def manual_dose(self):
@@ -227,6 +222,10 @@ class HydroController:
         """Run the hydro controller"""
         self.mqtt_client.loop_start()
         self.mqttio_controller.start()
+        # Need a better place to do this
+        calibration_data = read_calibration(self.app_config.ec_calibration_file)
+        _LOG.debug("Read calibration File: %s - data: %s", self.app_config.ec_calibration_file, calibration_data)
+        self.current_state.calibration_data = calibration_data
         while True:
             while not self.mqtt_client.is_connected():
                 _LOG.warning("mqtt_client not connected")
@@ -237,7 +236,7 @@ class HydroController:
                 _LOG.warning("MQTT IO process isn't running!")
             # _LOG.debug("%s %s", id(self.current_state), self.current_state)
 
-            if self.current_state.calibration_status == CalibrationStatus.CALIBRATING:
+            if self.current_state.calibration_data.status == CalibrationStatus.CALIBRATING:
                 self.calibrate_ec()
 
             if self.current_state.manual_dose:

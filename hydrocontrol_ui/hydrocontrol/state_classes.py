@@ -4,9 +4,10 @@ import logging
 import json
 import time
 from dataclasses import dataclass, asdict
+from typing import Union
 import yaml
 
-from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationStatus
+from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationData, CalibrationStatus
 
 
 def process_config(
@@ -39,6 +40,8 @@ class AppConfig:
     topic_prefix: str = "hydro"
     ec_prefix: str = "sensors/sensor/ec1"
     motor_channel: int = 0
+    ec_calibration_file: str = "./ec-config.json"
+    mqttio_config_file: str = "./mqtt-io.yml"
     log_level: str = "INFO"
 
     def __repr__(self):
@@ -52,9 +55,7 @@ class AppState:
 
     # Control variables
     control: bool = False
-    calibration_temperature: float = 25.0
-    calibration_status: CalibrationStatus = CalibrationStatus.NOT_CALIBRATED
-    calibration_status_message: str = "Not Calibrated"
+    calibration_data: Union[CalibrationData, None] = None
     manual_dose: bool = False
     manual_dose_duration: int = 0
     equilibration_time: int = 3
