@@ -52,7 +52,7 @@ def create_on_connect(
             if name in subscribe_list:
                 retcodes.append(client.subscribe(topic))
                 subscribed.append(topic)
-        if all([retcode[0] == 0 for retcode in retcodes]):
+        if all((retcode[0] == 0 for retcode in retcodes)):
             _LOG.debug("Subscribed to topics: %s", subscribed)
         else:
             _LOG.warning("Error subscribing to topics: %s", retcodes)
@@ -66,8 +66,7 @@ def create_on_connect(
 
     if flask_decorator:
         return decorated_on_mqtt_connect
-    else:
-        return on_mqtt_connect
+    return on_mqtt_connect
 
 
 def create_on_message(
@@ -129,8 +128,7 @@ def create_on_message(
 
     if flask_decorator:
         return decorated_on_mqtt_message
-    else:
-        return on_mqtt_message
+    return on_mqtt_message
 
 
 def process_entries(state: AppState, data: dict, keys: List[str]):

@@ -9,7 +9,6 @@ import yaml
 
 from hydrocontrol_ui.hydrocontrol.ec_calibrator import (
     CalibrationData,
-    CalibrationStatus,
     read_calibration,
 )
 
@@ -22,10 +21,10 @@ def process_config(
     """Process the configuration file."""
     with open(file_path, "r", encoding="utf-8") as f:
         yamls = yaml.safe_load(f)
-        if "app" in yamls:
-            _app_config = AppConfig(**yamls["app"])
-        if "state" in yamls:
-            _current_state = AppState(**yamls["state"])
+        if not "app" in yamls and not "state" in yamls:
+            raise AttributeError("Config file must contain 'app' and 'state' sections")
+        _app_config = AppConfig(**yamls["app"])
+        _current_state = AppState(**yamls["state"])
 
     if not hasattr(logging, _app_config.log_level):
         raise AttributeError(f"Unknown log_level: {_app_config.APP.log_level}")

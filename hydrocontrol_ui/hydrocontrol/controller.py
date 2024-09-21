@@ -8,21 +8,22 @@ import socket
 import subprocess
 import sys
 import time
-
 from typing import Callable
 
 import paho.mqtt.client as mqtt
+from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
+    DFRobotExpansionBoardIIC,
+    DFRobotExpansionBoardServo,
+)
 
 from hydrocontrol_ui.hydrocontrol.state_classes import (
     AppConfig,
     AppState,
-    CalibrationStatus,
     process_config,
 )
-from hydrocontrol_ui.hydrocontrol.ec_calibrator import run_calibration
-from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
-    DFRobotExpansionBoardIIC,
-    DFRobotExpansionBoardServo,
+from hydrocontrol_ui.hydrocontrol.ec_calibrator import (
+    CalibrationStatus,
+    run_calibration,
 )
 
 
@@ -34,7 +35,6 @@ class Pump:
     """Class for running peristaltic dosing pump"""
 
     def __init__(self, channel: int):
-        # pylint: disable=import-outside-toplevel,import-error
         self.mock = False
         self.channel = channel
         try:
@@ -62,10 +62,9 @@ class Pump:
         time.sleep(dose_duration)
         if not self.mock:
             self.servo.move(self.channel, 90)
-        return
 
 
-class MQTT_IO:
+class MqttIo:
     """Handles controlling an mqtt-io process"""
 
     def __init__(self, config_file):
@@ -76,9 +75,10 @@ class MQTT_IO:
         # self.mqtt_logfile = None
 
     def start(self):
+        """Start the mqtt-io process"""
         mqtt_logfile_name = "mqtt_io.log"
         # Need to think about the best place to close the filehandle
-        mqtt_logfile = open(mqtt_logfile_name, mode="w")
+        mqtt_logfile = open(mqtt_logfile_name, mode="w", encoding="utf-8")
         self.process = subprocess.Popen(
             [sys.executable, "-m", "mqtt_io", self.config_file],
             stdout=mqtt_logfile,
@@ -92,6 +92,7 @@ class MQTT_IO:
             )
 
     def restart(self):
+        """Restart the mqtt-io process"""
         if self.running():
             self.process.kill()
         else:
@@ -99,6 +100,7 @@ class MQTT_IO:
         self.start()
 
     def running(self):
+        """Check if the mqtt-io process is running"""
         self.process.poll()
         return self.process.returncode is None
 
@@ -111,7 +113,7 @@ class HydroController:
         self.app_config = app_config
         self.loop_delay = 3
 
-        self.mqttio_controller = MQTT_IO(self.app_config.mqttio_config_file)
+        self.mqttio_controller = MqttIo(self.app_config.mqttio_config_file)
         self.mqtt_client = self.setup_mqtt()
         self.ec_pump = Pump(app_config.motor_channel)
 
@@ -146,7 +148,7 @@ class HydroController:
             for topic in self.mqtt_topics.values():
                 retcodes.append(client.subscribe(topic))
                 subscribed.append(topic)
-            if all([retcode[0] == 0 for retcode in retcodes]):
+            if all((retcode[0] == 0 for retcode in retcodes)):
                 _LOG.debug("Subscribed to topics: %s", subscribed)
             else:
                 _LOG.warning("Error subscribing to topics: %s", retcodes)
@@ -185,7 +187,6 @@ class HydroController:
                 # self.mqtt_client.publish(
                 #     self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
                 # )
-        return
 
     def calibrate_ec(self):
         """Calibrate the EC sensor"""
@@ -204,7 +205,6 @@ class HydroController:
 
         if self.current_state.calibration_data.status == CalibrationStatus.CALIBRATED:
             self.mqttio_controller.restart()
-        return
 
     def manual_dose(self):
         """Dose for a given duration"""
@@ -218,7 +218,6 @@ class HydroController:
         #     self.mqtt_topics[ID_STATE], status_json, qos=1, retain=True
         # )
         self.current_state.manual_dose = False
-        return
 
     def run(self):
         """Run the hydro controller"""

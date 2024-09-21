@@ -6,8 +6,8 @@ from argparse import ArgumentParser
 
 from werkzeug.serving import is_running_from_reloader
 
+from hydrocontrol_ui.hydrocontrol import controller
 from hydrocontrol_ui.hydrocontrol.state_classes import process_config
-import hydrocontrol_ui.hydrocontrol.controller as controller
 
 from . import app
 

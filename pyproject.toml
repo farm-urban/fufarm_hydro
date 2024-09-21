@@ -3,12 +3,27 @@ name = "fufarm_hydro"
 version = "0.0.1"
 description = "A simple hydroponics control system"
 readme = "README.md"
-license = {text = "BSD-3-Clause"}
-maintainers = [{name = "Jens Thomas", email = "jens@farmurban.co.uk"}]
+license = { text = "BSD-3-Clause" }
+maintainers = [{ name = "Jens Thomas", email = "jens@farmurban.co.uk" }]
 dependencies = [
     "flask",
-    "mqtt-io@git+https://github.com/linucks/mqtt-io.git@dfr0300"
+    "mqtt-io@git+https://github.com/linucks/mqtt-io.git@dfr0300",
 ]
 
 [project.urls]
 Repository = "https://github.com/farm-urban/fufarm_hydro"
+
+
+[tool.pylint."MESSAGES CONTROL"]
+# Disable the message, report, category or checker with the given id(s). You
+# can either give multiple identifiers separated by comma (,) or put this
+# option multiple times (only on the command line, not in the configuration
+# file where it should appear only once). You can also use "--disable=all" to
+# disable everything first and then reenable specific checks. For example, if
+# you want to run only the similarities checker, you can use "--disable=all
+# --enable=similarities". If you want to run only the classes checker, but have
+# no Warning level messages displayed, use "--disable=all --enable=classes
+# --disable=W".
+disable = '''too-few-public-methods,
+too-many-instance-attributes
+'''
