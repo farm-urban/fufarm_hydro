@@ -38,7 +38,7 @@ if not is_running_from_reloader():
     hydro_controller = controller.HydroController(app_config, app_state)
     thread = threading.Thread(target=hydro_controller.run)
 
-from . import views  # noqa: E402, F401
+from . import views  # pylint: disable=wrong-import-position, unused-import
 
 if __name__ == "__main__":
     if not is_running_from_reloader():

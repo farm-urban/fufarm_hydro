@@ -12,7 +12,7 @@ import time
 
 import yaml
 
-import mqtt_io.modules.sensor.dfr0300 as dfr0300
+from mqtt_io.modules.sensor import dfr0300
 from mqtt_io.server import _init_module
 
 MQTTIO_CONFIG_FILE = "./mqtt-io.yml"
@@ -27,6 +27,8 @@ ECREF = 200.0
 
 
 class CalibrationException(Exception):
+    """Exception for calibration errors."""
+
     pass
 
 
@@ -86,6 +88,7 @@ class CalibrationData:
 
     @property
     def calibration_time(self) -> int:
+        """Return the calibration time from the last point calibrated."""
         time_low = self._calibration_time(self.point_low)
         time_high = self._calibration_time(self.point_high)
         if time_low > 0 and time_high > 0:

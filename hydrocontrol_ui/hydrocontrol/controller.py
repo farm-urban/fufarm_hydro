@@ -261,5 +261,5 @@ if __name__ == "__main__":
         format="%(asctime)s rpi: %(message)s",
     )
 
-    controller = HydroController(APP_CONFIG, CURRENT_STATE, MQTTIO_CONFIG_FILE)
+    controller = HydroController(APP_CONFIG, CURRENT_STATE)
     controller.run()
