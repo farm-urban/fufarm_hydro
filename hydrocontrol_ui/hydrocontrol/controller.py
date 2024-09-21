@@ -85,7 +85,7 @@ class MQTT_IO:
             stderr=subprocess.STDOUT,
             close_fds=True,
         )
-        _LOG.debug("Started MQTT-IO process: %s",self.process)
+        _LOG.debug("Started MQTT-IO process: %s", self.process)
         if not self.running():
             raise RuntimeError(
                 f"Problem starting MQTT IO process. Check log {mqtt_logfile_name}"
@@ -106,8 +106,7 @@ class MQTT_IO:
 class HydroController:
     """Hydroponic controller"""
 
-    def __init__(
-        self, app_config: AppConfig, current_state: AppState):
+    def __init__(self, app_config: AppConfig, current_state: AppState):
         self.current_state = current_state
         self.app_config = app_config
         self.loop_delay = 3
@@ -116,8 +115,7 @@ class HydroController:
         self.mqtt_client = self.setup_mqtt()
         self.ec_pump = Pump(app_config.motor_channel)
 
-
-    def setup_mqtt(self): 
+    def setup_mqtt(self):
         """Setup the MQTT client and subscribe to topics."""
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         host = self.app_config.mqtt_host
@@ -139,7 +137,9 @@ class HydroController:
     def create_on_connect(self) -> Callable:
         """Create a callback to handle connection to MQTT broker."""
 
-        def on_mqtt_connect(client: mqtt.Client, _userdata, _connect_flags, _reason_code, _properties):
+        def on_mqtt_connect(
+            client: mqtt.Client, _userdata, _connect_flags, _reason_code, _properties
+        ):
             """Subscribe to topics on connect."""
             retcodes = []
             subscribed = []
@@ -191,7 +191,9 @@ class HydroController:
         """Calibrate the EC sensor"""
         _LOG.info("Calibrating EC sensor")
         try:
-            run_calibration(self.current_state.calibration_data, self.app_config.mqttio_config_file)
+            run_calibration(
+                self.current_state.calibration_data, self.app_config.mqttio_config_file
+            )
             # self.current_state.calibration_status = calibration_data.status
             # message = calibration_data.message
         except Exception as e:
@@ -232,7 +234,10 @@ class HydroController:
                 _LOG.warning("MQTT IO process isn't running!")
             # _LOG.debug("%s %s", id(self.current_state), self.current_state)
 
-            if self.current_state.calibration_data.status == CalibrationStatus.CALIBRATING:
+            if (
+                self.current_state.calibration_data.status
+                == CalibrationStatus.CALIBRATING
+            ):
                 self.calibrate_ec()
 
             if self.current_state.manual_dose:

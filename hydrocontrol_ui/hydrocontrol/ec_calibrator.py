@@ -19,7 +19,7 @@ MQTTIO_CONFIG_FILE = "./mqtt-io.yml"
 INITIAL_KVALUE = 1.0
 CALIBRATION_FILE_ENCODING = "ascii"
 CALIBRATION_TEMPERATURE = 25.0
-CALIBRATION_VALID = 60*60*24*28 # 28 days
+CALIBRATION_VALID = 60 * 60 * 24 * 28  # 28 days
 LOW_BUFFER_SOLUTION = 1.413
 HIGH_BUFFER_SOLUTION = 12.88
 RES2 = 820.0
@@ -74,7 +74,7 @@ class CalibrationData:
             self.point_high = CalibrationPoint(**self.point_high)
         if self.calibration_time < 0:
             self.status = CalibrationStatus.NOT_CALIBRATED
-            self.message = "Not Calibrated"            
+            self.message = "Not Calibrated"
         elif time.time() - self.calibration_time <= CALIBRATION_VALID:
             self.status = CalibrationStatus.CALIBRATED
             timestamp = datetime.datetime.fromtimestamp(self.calibration_time)
@@ -83,7 +83,7 @@ class CalibrationData:
             self.status = CalibrationStatus.NOT_CALIBRATED
             timestamp = datetime.datetime.fromtimestamp(self.calibration_time)
             self.message = f"Calibration expired. Last calibrated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
-    
+
     @property
     def calibration_time(self) -> int:
         time_low = self._calibration_time(self.point_low)

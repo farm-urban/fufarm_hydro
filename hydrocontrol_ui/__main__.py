@@ -35,9 +35,7 @@ app.config["APP_STATE"] = app_state
 # In debug mode flask forks intself so we don't want to start the controller twice
 # https://raspberrypi.stackexchange.com/questions/148825/lgpio-gpio-setup-fails-with-gpio-not-allocated-when-run-from-a-flask-app
 if not is_running_from_reloader():
-    hydro_controller = controller.HydroController(
-        app_config, app_state
-    )
+    hydro_controller = controller.HydroController(app_config, app_state)
     thread = threading.Thread(target=hydro_controller.run)
 
 from . import views  # noqa: E402, F401
