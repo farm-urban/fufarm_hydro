@@ -19,7 +19,7 @@ from hydrocontrol_ui.hydrocontrol.state_classes import (
     CalibrationStatus,
     process_config,
 )
-from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationData, read_calibration, run_calibration
+from hydrocontrol_ui.hydrocontrol.ec_calibrator import run_calibration
 from mqtt_io.modules.sensor.drivers.dfr0566_driver import (
     DFRobotExpansionBoardIIC,
     DFRobotExpansionBoardServo,
@@ -222,10 +222,6 @@ class HydroController:
         """Run the hydro controller"""
         self.mqtt_client.loop_start()
         self.mqttio_controller.start()
-        # Need a better place to do this
-        calibration_data = read_calibration(self.app_config.ec_calibration_file)
-        _LOG.debug("Read calibration File: %s - data: %s", self.app_config.ec_calibration_file, calibration_data)
-        self.current_state.calibration_data = calibration_data
         while True:
             while not self.mqtt_client.is_connected():
                 _LOG.warning("mqtt_client not connected")

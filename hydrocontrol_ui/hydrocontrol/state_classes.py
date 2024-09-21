@@ -7,8 +7,9 @@ from dataclasses import dataclass, asdict
 from typing import Union
 import yaml
 
-from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationData, CalibrationStatus
+from hydrocontrol_ui.hydrocontrol.ec_calibrator import CalibrationData, CalibrationStatus, read_calibration
 
+_LOG = logging.getLogger()
 
 def process_config(
     file_path,
@@ -23,6 +24,10 @@ def process_config(
 
     if not hasattr(logging, _app_config.log_level):
         raise AttributeError(f"Unknown log_level: {_app_config.APP.log_level}")
+    
+    calibration_data = read_calibration(_app_config.ec_calibration_file)
+    _LOG.debug("Read calibration File: %s - data: %s", _app_config.ec_calibration_file, calibration_data)
+    _current_state.calibration_data = calibration_data
 
     return _app_config, _current_state
 
