@@ -3,7 +3,7 @@
 import logging
 import json
 import time
-from dataclasses import dataclass, asdict
+import dataclasses
 from typing import Union
 import yaml
 
@@ -40,7 +40,7 @@ def process_config(
     return _app_config, _current_state
 
 
-@dataclass
+@dataclasses.dataclass(slots=True)
 class AppConfig:
     """Configures the Application."""
 
@@ -62,7 +62,7 @@ class AppConfig:
         return f"<\n{x}\n>"
 
 
-@dataclass
+@dataclasses.dataclass(slots=True)
 class AppState:
     """Tracks the current state of the autodoser."""
 
@@ -82,7 +82,7 @@ class AppState:
 
     def status_dict(self):
         """Return the variables as a dictionary."""
-        return asdict(self)
+        return dataclasses.asdict(self)
 
     def status_json(self):
         """Return status as json string"""

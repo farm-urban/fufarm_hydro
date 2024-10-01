@@ -104,15 +104,15 @@ def calibrate_ec():
     except ValueError:
         msg = f"Invalid temperature for calibration: '{temperature}'"
         _LOG.info(msg)
-        APP_STATE.calibration_status = CalibrationStatus.ERROR
-        APP_STATE.calibration_status_message = msg
+        APP_STATE.calibration_data.status = CalibrationStatus.ERROR
+        APP_STATE.alibration_data.message = msg
         data = {"status": "failure"}
         return data, 422
     _LOG.info("Calibrate ecprobe: %s", temperature)
     # mqtt.publish(mqtt_topics[ID_CALIBRATE], "ec")
-    APP_STATE.calibration_status = CalibrationStatus.CALIBRATING
-    APP_STATE.calibration_status_message = "Calibrating..."
-    APP_STATE.calibrate_temperature = temperature
+    APP_STATE.calibration_data.status = CalibrationStatus.CALIBRATING
+    APP_STATE.calibration_data.message = "Calibrating..."
+    APP_STATE.calibration_data.temperature = temperature
     return {"status": "success"}, 200
 
 
