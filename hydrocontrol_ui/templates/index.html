@@ -44,8 +44,8 @@
       <label for="select-mode">Mode: </label>
       <select id="select-mode" name="mode">
         <optgroup label="Mode">
-          <option value="monitor">Monitor</option>
-          <option value="control">Control</option>
+          <option value="monitor" {{'selected' if not app_state.control}}>Monitor</option>
+          <option value="control" {{'selected' if app_state.control}}>Control</option>
         </optgroup>
       </select>
     </div>
