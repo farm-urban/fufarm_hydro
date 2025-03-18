@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import statistics
+import sys
 import time
 
 
@@ -15,6 +16,7 @@ import yaml
 from mqtt_io.modules.sensor import dfr0300
 from mqtt_io.server import _init_module
 
+PY310 = sys.version_info >= (3, 10)
 MQTTIO_CONFIG_FILE = "./mqtt-io.yml"
 INITIAL_KVALUE = 1.0
 CALIBRATION_FILE_ENCODING = "ascii"
@@ -29,8 +31,6 @@ ECREF = 200.0
 class CalibrationException(Exception):
     """Exception for calibration errors."""
 
-    pass
-
 
 class CalibrationStatus(IntEnum):
     """Enum for calibration status."""
@@ -44,7 +44,7 @@ class CalibrationStatus(IntEnum):
 _LOG = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(**({"slots": True} if PY310 else {}))
 class CalibrationPoint:
     """Class to handle calibration of a single point"""
 
@@ -56,7 +56,7 @@ class CalibrationPoint:
     message: str = "Unknown Status"
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(**({"slots": True} if PY310 else {}))
 class CalibrationData:
     """Class to handle calibration data"""
 
@@ -144,7 +144,12 @@ def read_calibration(calibration_file) -> CalibrationData:
         ) as file_handle:
             data = json.load(file_handle)
         return CalibrationData(**data)
-    raise FileNotFoundError(f"Calibration file ${calibration_file} not found")
+    else:
+        _LOG.warning(
+            "Calibration file not found: %s - using defaults.", calibration_file
+        )
+        return CalibrationData()
+    # raise FileNotFoundError(f"Calibration file ${calibration_file} not found")
 
 
 def write_calibration(calibration_data, calibration_file) -> None:

@@ -4,6 +4,7 @@ import logging
 import json
 import time
 import dataclasses
+import sys
 from typing import Union
 import yaml
 
@@ -13,6 +14,8 @@ from hydrocontrol_ui.hydrocontrol.ec_calibrator import (
 )
 
 _LOG = logging.getLogger()
+
+PY310 = sys.version_info >= (3, 10)
 
 
 def process_config(
@@ -40,7 +43,7 @@ def process_config(
     return _app_config, _current_state
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(**({"slots": True} if PY310 else {}))
 class AppConfig:
     """Configures the Application."""
 
@@ -62,7 +65,7 @@ class AppConfig:
         return f"<\n{x}\n>"
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(**({"slots": True} if PY310 else {}))
 class AppState:
     """Tracks the current state of the autodoser."""
 

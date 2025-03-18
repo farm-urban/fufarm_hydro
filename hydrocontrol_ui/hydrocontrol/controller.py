@@ -1,6 +1,4 @@
-"""Farm Urban Hydroponics Control System               
-
-"""
+"""Farm Urban Hydroponics Control System"""
 
 import logging
 import os
