@@ -104,7 +104,7 @@ class MqttIo:
 
 
 class HydroController:
-    """Hydroponic controller"""
+    """Class to control an autodosing hydroponics system"""
 
     def __init__(self, app_config: AppConfig, current_state: AppState):
         self.current_state = current_state
