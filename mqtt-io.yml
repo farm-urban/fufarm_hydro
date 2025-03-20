@@ -38,10 +38,23 @@ sensor_modules:
     temperature_compensation: 25
     humidity_compensation: 50
 
+gpio_modules:
+  # Use the Raspberry Pi built-in GPIO
+  - name: rpi
+    module: raspberrypi
+
+digital_inputs:
+  - name: water_level
+    module: rpi
+    pin: 0
+    ha_discovery:
+      name: Water Level Trigger
+      device_class: moisture
+
 sensor_inputs:
   - name: ec
     module: dfr0300
-    pin: 0
+    pin: 1
     tempsensor: temperature
     interval: 5
     digits: 4
@@ -51,27 +64,42 @@ sensor_inputs:
     type: temperature
     interval: 5
     digits: 4
+    ha_discovery:
+      name: Temperature
+      device_class: temperature
 
   - name: humidity
     module: aht20 
     type: humidity
     interval: 5
     digits: 4
+    ha_discovery:
+      name: Humidity
+      device_class: humidity
 
   - name: air_quality
     module: ens160
     interval: 10
     digits: 0
     type: aqi
+    ha_discovery:
+      name: Air Quality
+      device_class: aqi
 
   - name: volatile_organic_compounds
     module: ens160
     interval: 10
     digits: 0
     type: tvoc
+    ha_discovery:
+      name: Volatile Organic Compounds
+      device_class: volatile_organic_compounds
 
   - name: eco2
     module: ens160
     interval: 10
     digits: 0
     type: eco2
+    ha_discovery:
+      name: Carbon Dioxide
+      device_class: carbon_dioxide
